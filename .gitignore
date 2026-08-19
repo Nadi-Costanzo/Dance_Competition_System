@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+admin_password.txt
+cert.pem
+key.pem
+
+# Databases and application data
+*.db
+*.sqlite
+*.sqlite3
+backups/
+
+# Development tools
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Operating systems
+.DS_Store
+Thumbs.db
