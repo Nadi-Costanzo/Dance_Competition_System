@@ -17,6 +17,9 @@ key.pem
 *.db
 *.sqlite
 *.sqlite3
+*.db-*
+*.sqlite-*
+*.sqlite3-*
 backups/
 
 # Development tools
