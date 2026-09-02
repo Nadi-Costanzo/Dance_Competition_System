@@ -19,7 +19,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.1.0",
-    description="Dance Competition System API",
+    version='0.1.0',
+    description='Dance Competition System API',
     lifespan=lifespan,
 )
