@@ -3,8 +3,10 @@ name = "dcs"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
+    "aiosqlite>=0.22.1",
     "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
     "pydantic-settings>=2.15.0",
+    "sqlalchemy>=2.0.52",
 ]
 
 [dependency-groups]
@@ -15,3 +17,9 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "ruff>=0.16.3",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
