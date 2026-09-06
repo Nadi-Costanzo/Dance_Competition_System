@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.health import router as health_router
 from app.config import settings
 from app.database import async_engine, initialize_database
 
@@ -19,7 +20,10 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     title=settings.app_name,
-    version='0.1.0',
-    description='Dance Competition System API',
+    description=settings.app_description,
+    version=settings.app_version,
     lifespan=lifespan,
 )
+
+
+app.include_router(health_router, prefix='/api/v1')
