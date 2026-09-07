@@ -7,6 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.config import settings
+from app.database import enable_sqlite_pragmas
 from app.models.base import Base
 
 # this is the Alembic Config object, which provides
@@ -71,7 +72,7 @@ async def run_async_migrations() -> None:
         prefix='sqlalchemy.',
         poolclass=pool.NullPool,
     )
-
+    enable_sqlite_pragmas(connectable)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
 
