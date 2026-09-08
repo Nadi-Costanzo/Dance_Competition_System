@@ -1,0 +1,48 @@
+# Python byte-compiled files
+__pycache__/
+*.py[cod]
+
+# Виртуальное окружение хоста (контейнерное создаёт uv sync в Dockerfile)
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Переменные окружения и секреты — не должны попасть в образ
+.env
+.env.*
+.env.example
+
+# Сертификаты (монтируются с хоста, в образе не нужны)
+certs/
+
+# Git
+.git/
+.gitignore
+
+# Тесты, кэши и отчёты
+tests/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Логи и файлы БД — данные не в образе
+*.log
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+backups/
+
+# Документация
+*.md
+docs/
+
+# Сборка
+build/
+dist/
+*.egg-info/
+.cache/
