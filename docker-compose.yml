@@ -1,0 +1,26 @@
+name: dance_competition_system
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DCS_DATABASE_URL: sqlite+aiosqlite:////app/data/dcs.db
+    ports:
+      - "8443:8443"
+    volumes:
+      # Именованный том для БД
+      - dcs_data:/app/data
+      # сертификаты с хоста, монтируются только для чтения
+      - ./certs:/certs:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsk", "https://localhost:8443/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  dcs_data:
