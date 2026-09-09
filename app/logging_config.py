@@ -5,7 +5,6 @@ from app.config import settings
 from app.constants import (
     LOG_BACKUP_COUNT,
     LOG_DATEFMT,
-    LOG_FILE_PATH,
     LOG_FORMAT,
     LOG_MAX_BYTES,
 )
@@ -24,28 +23,38 @@ def _resolve_log_level(level_name: str) -> str:
 
 _LOG_LEVEL = _resolve_log_level(settings.log_level)
 _FORMATTER = logging.Formatter(LOG_FORMAT, datefmt=LOG_DATEFMT)
+_handlers: list[logging.Handler] | None = None
 
-# Единственные хендлеры на весь процесс — создаются один раз при импорте.
-_CONSOLE_HANDLER = logging.StreamHandler()
-_CONSOLE_HANDLER.setFormatter(_FORMATTER)
 
-LOG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+def _get_handlers() -> list[logging.Handler]:
+    """Создает и возвращает общие хендлеры.
 
-_FILE_HANDLER = RotatingFileHandler(
-    LOG_FILE_PATH,
-    maxBytes=LOG_MAX_BYTES,
-    backupCount=LOG_BACKUP_COUNT,
-    encoding='utf-8',
-)
-_FILE_HANDLER.setFormatter(_FORMATTER)
+    Создаются только при первом вызове и сохраняются в глобальную переменную.
+    """
+    global _handlers
+    if _handlers is None:
+        # первое обращение:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(_FORMATTER)
+        log_file_path = (settings.log_dir / 'app.log').resolve()
+        log_file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = RotatingFileHandler(
+            log_file_path,
+            maxBytes=LOG_MAX_BYTES,
+            backupCount=LOG_BACKUP_COUNT,
+            encoding='utf-8',
+        )
+        file_handler.setFormatter(_FORMATTER)
+        _handlers = [console_handler, file_handler]
+    return _handlers
 
 
 def _configure_logger(logger: logging.Logger, log_level: str) -> None:
-    """Готовит логгер: уровень + общие (модульные) хендлеры."""
+    """Готовит логгер: уровень + общие хендлеры."""
     logger.setLevel(log_level)
     logger.propagate = False
-    logger.addHandler(_CONSOLE_HANDLER)
-    logger.addHandler(_FILE_HANDLER)
+    for handler in _get_handlers():
+        logger.addHandler(handler)
 
 
 def get_logger(name: str) -> logging.Logger:

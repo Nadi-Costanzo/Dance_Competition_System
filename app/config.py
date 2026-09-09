@@ -1,4 +1,5 @@
 from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -24,6 +25,7 @@ class Settings(BaseSettings):
     database_url: str = 'sqlite+aiosqlite:///./dcs.db'
     model_config = SettingsConfigDict(env_file='.env', env_prefix='DCS_')
     log_level: str = 'INFO'
+    log_dir: Path = Path('logs')
 
 
 settings = Settings()
