@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     app_version: str = _resolve_app_version()
     database_url: str = 'sqlite+aiosqlite:///./dcs.db'
     model_config = SettingsConfigDict(env_file='.env', env_prefix='DCS_')
+    log_level: str = 'INFO'
 
 
 settings = Settings()
