@@ -12,6 +12,7 @@ services:
     volumes:
       # Именованный том для БД
       - dcs_data:/app/data
+      - dcs_logs:/app/logs
       # сертификаты с хоста, монтируются только для чтения
       - ./certs:/certs:ro
     healthcheck:
@@ -24,3 +25,4 @@ services:
 
 volumes:
   dcs_data:
+  dcs_logs:

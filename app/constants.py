@@ -1,5 +1,3 @@
-from pathlib import Path
-
 NAMING_CONVENTION = {
     'ix': 'ix_%(column_0_label)s',
     'uq': 'uq_%(table_name)s_%(column_0_N_name)s',
@@ -26,9 +24,6 @@ LOG_BACKUP_COUNT = 3
 
 LOG_DATEFMT = '%Y-%m-%d %H:%M:%S'
 """Формат даты и времени для логгера."""
-
-LOG_FILE_PATH = Path('logs/app.log')
-"""Путь к логам."""
 
 LOG_FORMAT = '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
 """Формат логирования."""
