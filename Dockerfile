@@ -24,6 +24,5 @@ RUN uv sync --locked
 
 EXPOSE 8443
 
-# в связи с отсутствием [build-system] запускаем через python -m
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8443", \
     "--ssl-keyfile=/certs/key.pem", "--ssl-certfile=/certs/cert.pem"]
