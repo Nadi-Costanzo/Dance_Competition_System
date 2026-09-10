@@ -19,13 +19,15 @@ def _resolve_app_version() -> str:
 class Settings(BaseSettings):
     """Настройки приложения."""
 
+    model_config = SettingsConfigDict(env_file='.env', env_prefix='DCS_')
+
     app_name: str = 'Dance Competition System'
     app_description: str = 'Dance Competition System API'
     app_version: str = _resolve_app_version()
     database_url: str = 'sqlite+aiosqlite:///./dcs.db'
-    model_config = SettingsConfigDict(env_file='.env', env_prefix='DCS_')
     log_level: str = 'INFO'
     log_dir: Path = Path('logs')
+    root_path: str = ''
 
 
 settings = Settings()

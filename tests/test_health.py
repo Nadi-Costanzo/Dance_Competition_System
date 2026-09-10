@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.config import settings
+from app.constants import API_PREFIX
 from app.schemas.health import HealthResponse
 
 
@@ -42,3 +43,8 @@ def test_health_check_returns_503_on_db_timeout(
     assert parsed.checks.db.status == 'error'
     assert parsed.checks.db.reason == 'db_timeout'
     assert parsed.version == settings.app_version
+
+
+def test_health_path_uses_configured_prefix(client: TestClient) -> None:
+    """Проверяет, что путь зашит в client.get('/api/v1/health')."""
+    assert client.get(f'{API_PREFIX}/health').status_code == 200

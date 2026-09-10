@@ -27,7 +27,6 @@ def _get_app_uptime() -> int:
 
 @router.get(
     '/health',
-    tags=['Health'],
     response_model=HealthResponse,
 )
 async def health_check(response: Response) -> HealthResponse:

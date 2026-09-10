@@ -1,10 +1,11 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
 from app.api.health import router as health_router
 from app.config import settings
+from app.constants import API_PREFIX
 from app.database import async_engine, initialize_database
 from app.logging_config import get_logger, setup_logging
 
@@ -33,8 +34,11 @@ app = FastAPI(
     title=settings.app_name,
     description=settings.app_description,
     version=settings.app_version,
+    root_path=settings.root_path,
     lifespan=lifespan,
 )
 
+api_router = APIRouter(prefix=API_PREFIX)  # версия
+api_router.include_router(health_router, tags=['Health'])
 
-app.include_router(health_router, prefix='/api/v1')
+app.include_router(api_router)
