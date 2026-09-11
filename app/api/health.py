@@ -12,7 +12,13 @@ from app.constants import (
     DB_DETAIL_UNAVAILABLE,
 )
 from app.database import async_engine, check_database_connection
-from app.schemas.health import DbCheck, HealthChecks, HealthResponse
+from app.schemas.health import (
+    HEALTH_DEGRADED_EXAMPLE,
+    HEALTH_OK_EXAMPLE,
+    DbCheck,
+    HealthChecks,
+    HealthResponse,
+)
 
 # Время запуска приложения. (момент импорта модуля)
 _APP_START = time.monotonic()
@@ -28,14 +34,30 @@ def _get_app_uptime() -> int:
 @router.get(
     '/health',
     response_model=HealthResponse,
+    responses={
+        status.HTTP_200_OK: {
+            'model': HealthResponse,
+            'description': 'БД подключена, приложение работает',
+            'content': {'application/json': {'example': HEALTH_OK_EXAMPLE}},
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            'model': HealthResponse,
+            'description': 'Отсутствует подключение к БД, приложение работает',
+            'content': {
+                'application/json': {'example': HEALTH_DEGRADED_EXAMPLE}
+            },
+        },
+    },
 )
 async def health_check(response: Response) -> HealthResponse:
     """Проверка состояния приложения.
 
-    Возвращает статус приложения и время его работы.
-    Если соединение с БД отсутствует, возвращает статус 503 и причину ошибки.
+    - Возвращает статус 200 и время его работы.
+
+    - Возвращает статус 503 и причину ошибки, если соединение с БД отсутствует.
     """
-    start_time = time.monotonic()
+    # Часы высокого разрешения (monotic на Windows дает шаг 15.6 мс)
+    start_time = time.perf_counter()
     try:
         await asyncio.wait_for(
             check_database_connection(async_engine), timeout=DB_CHECK_TIMEOUT_S
@@ -59,7 +81,10 @@ async def health_check(response: Response) -> HealthResponse:
     response.status_code = (
         status.HTTP_200_OK if is_ok else status.HTTP_503_SERVICE_UNAVAILABLE
     )
-    latency_ms = int((time.monotonic() - start_time) * 1000)
+    # при ошибке замер бессмыслен: это был бы таймаут, а не время ответа БД
+    latency_ms = (
+        int((time.perf_counter() - start_time) * 1000) if is_ok else None
+    )
     return HealthResponse(
         status='ok' if is_ok else 'degraded',
         version=settings.app_version,
