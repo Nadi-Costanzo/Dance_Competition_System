@@ -28,12 +28,19 @@ def _get_app_uptime() -> int:
 @router.get(
     '/health',
     response_model=HealthResponse,
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            'model': HealthResponse,
+            'description': 'Приложение работает, БД недоступна',
+        }
+    },
 )
 async def health_check(response: Response) -> HealthResponse:
     """Проверка состояния приложения.
 
-    Возвращает статус приложения и время его работы.
-    Если соединение с БД отсутствует, возвращает статус 503 и причину ошибки.
+    - Возвращает статус 200 и время его работы.
+
+    - Возвращает статус 503 и причину ошибки, если соединение с БД отсутствует.
     """
     start_time = time.monotonic()
     try:

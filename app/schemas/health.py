@@ -1,15 +1,23 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DbCheck(BaseModel):
     """Результат проверки одной зависимости."""
 
     status: Literal['ok', 'error']
-    latency_ms: int
-    reason: str | None = None
-    detail: str | None = None
+    latency_ms: int = Field(description='Длительность проверки соединения')
+    reason: Literal['db_unavailable', 'db_locked', 'db_timeout'] | None = (
+        Field(
+            default=None,
+            description='Диагностический код (только при status=error)',
+        )
+    )
+    detail: str | None = Field(
+        default=None,
+        description='Человекочитаемое пояснение без пути к БД и стектрейса',
+    )
 
 
 class HealthChecks(BaseModel):
