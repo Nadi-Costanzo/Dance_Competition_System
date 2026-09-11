@@ -38,7 +38,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-api_router = APIRouter(prefix=API_PREFIX)  # версия
+api_router = APIRouter(prefix=API_PREFIX)
 api_router.include_router(health_router, tags=['Health'])
 
 app.include_router(api_router)
