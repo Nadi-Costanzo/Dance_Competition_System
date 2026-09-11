@@ -12,7 +12,13 @@ from app.constants import (
     DB_DETAIL_UNAVAILABLE,
 )
 from app.database import async_engine, check_database_connection
-from app.schemas.health import DbCheck, HealthChecks, HealthResponse
+from app.schemas.health import (
+    HEALTH_DEGRADED_EXAMPLE,
+    HEALTH_OK_EXAMPLE,
+    DbCheck,
+    HealthChecks,
+    HealthResponse,
+)
 
 # Время запуска приложения. (момент импорта модуля)
 _APP_START = time.monotonic()
@@ -29,10 +35,18 @@ def _get_app_uptime() -> int:
     '/health',
     response_model=HealthResponse,
     responses={
+        status.HTTP_200_OK: {
+            'model': HealthResponse,
+            'description': 'БД подключена, приложение работает',
+            'content': {'application/json': {'example': HEALTH_OK_EXAMPLE}},
+        },
         status.HTTP_503_SERVICE_UNAVAILABLE: {
             'model': HealthResponse,
-            'description': 'Приложение работает, БД недоступна',
-        }
+            'description': 'Отсутствует подключение к БД, приложение работает',
+            'content': {
+                'application/json': {'example': HEALTH_DEGRADED_EXAMPLE}
+            },
+        },
     },
 )
 async def health_check(response: Response) -> HealthResponse:
