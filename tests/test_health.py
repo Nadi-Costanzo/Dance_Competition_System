@@ -42,6 +42,7 @@ def test_health_check_returns_503_on_db_timeout(
     assert parsed.status == 'degraded'
     assert parsed.checks.db.status == 'error'
     assert parsed.checks.db.reason == 'db_timeout'
+    assert parsed.checks.db.latency_ms is None
     assert parsed.version == settings.app_version
 
 

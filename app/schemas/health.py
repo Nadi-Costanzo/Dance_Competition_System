@@ -7,7 +7,10 @@ class DbCheck(BaseModel):
     """Результат проверки одной зависимости."""
 
     status: Literal['ok', 'error']
-    latency_ms: int = Field(description='Длительность проверки соединения')
+    latency_ms: int | None = Field(
+        default=None,
+        description='Длительность текущего соединения (только при status=ok)',
+    )
     reason: Literal['db_unavailable', 'db_locked', 'db_timeout'] | None = (
         Field(
             default=None,

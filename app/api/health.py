@@ -42,7 +42,8 @@ async def health_check(response: Response) -> HealthResponse:
 
     - Возвращает статус 503 и причину ошибки, если соединение с БД отсутствует.
     """
-    start_time = time.monotonic()
+    # Часы высокого разрешения (monotic на Windows дает шаг 15.6 мс)
+    start_time = time.perf_counter()
     try:
         await asyncio.wait_for(
             check_database_connection(async_engine), timeout=DB_CHECK_TIMEOUT_S
@@ -66,7 +67,10 @@ async def health_check(response: Response) -> HealthResponse:
     response.status_code = (
         status.HTTP_200_OK if is_ok else status.HTTP_503_SERVICE_UNAVAILABLE
     )
-    latency_ms = int((time.monotonic() - start_time) * 1000)
+    # при ошибке замер бессмыслен: это был бы таймаут, а не время ответа БД
+    latency_ms = (
+        int((time.perf_counter() - start_time) * 1000) if is_ok else None
+    )
     return HealthResponse(
         status='ok' if is_ok else 'degraded',
         version=settings.app_version,
