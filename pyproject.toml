@@ -84,7 +84,7 @@ plugins = ["pydantic.mypy"]
 
 [tool.coverage.run]
 source = ["app"]
-omit = ["*/__init__.py", "*/alembic/*", "*/static/*", "*/template/*" ]
+omit = ["*/__init__.py", "*/alembic/*"]
 branch = true
 
 [tool.coverage.report]

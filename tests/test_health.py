@@ -5,12 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.config import settings
 from app.constants import API_PREFIX
+from app.main import app
 from app.schemas.health import HealthResponse
 
 
 def test_health_check_returns_200(client: TestClient) -> None:
     """Проверяет, что get.health возвращает 200 OK."""
-    response = client.get('/api/v1/health')
+    response = client.get(f'{API_PREFIX}/health')
     data = response.json()
     assert response.status_code == 200
     parsed = HealthResponse.model_validate(data)
@@ -53,7 +54,7 @@ def test_health_check_returns_503(
         'app.api.health.check_database_connection',
         _raise,
     )
-    response = client.get('/api/v1/health')
+    response = client.get(f'{API_PREFIX}/health')
     data = response.json()
     assert response.status_code == 503
     parsed = HealthResponse.model_validate(data)
@@ -64,6 +65,8 @@ def test_health_check_returns_503(
     assert parsed.version == settings.app_version
 
 
-def test_health_path_uses_configured_prefix(client: TestClient) -> None:
-    """Проверяет, что путь зашит в client.get('/api/v1/health')."""
-    assert client.get(f'{API_PREFIX}/health').status_code == 200
+def test_all_api_paths_use_configured_prefix() -> None:
+    """Все пути API объявлены под единым префиксом."""
+    paths = app.openapi()['paths']
+    assert paths
+    assert all(path.startswith(API_PREFIX) for path in paths)
