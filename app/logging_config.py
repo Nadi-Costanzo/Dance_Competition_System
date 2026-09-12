@@ -3,10 +3,12 @@ from logging.handlers import RotatingFileHandler
 
 from app.config import settings
 from app.constants import (
+    LIBRARY_LOGGER_NAMES,
     LOG_BACKUP_COUNT,
     LOG_DATEFMT,
     LOG_FORMAT,
     LOG_MAX_BYTES,
+    SYSTEM_LOGGER_NAMES,
 )
 
 
@@ -21,7 +23,11 @@ def _resolve_log_level(level_name: str) -> str:
     return upper
 
 
-_LOG_LEVEL = _resolve_log_level(settings.log_level)
+_SYSTEM_LOG_LEVEL = _resolve_log_level(settings.log_level)
+_LIBRARY_LOG_LEVEL = max(
+    logging.getLevelNamesMapping()[_SYSTEM_LOG_LEVEL],
+    logging.WARNING,
+)
 _FORMATTER = logging.Formatter(LOG_FORMAT, datefmt=LOG_DATEFMT)
 _handlers: list[logging.Handler] | None = None
 
@@ -49,7 +55,17 @@ def _get_handlers() -> list[logging.Handler]:
     return _handlers
 
 
-def _configure_logger(logger: logging.Logger, log_level: str) -> None:
+def _reset_and_configure_loggers(
+    names: tuple[str, ...], log_level: str | int
+) -> None:
+    """Сбрасывает чужие хендлеры и настраивает логгеры по именам."""
+    for logger_name in names:
+        logger = logging.getLogger(logger_name)
+        logger.handlers = []
+        _configure_logger(logger, log_level=log_level)
+
+
+def _configure_logger(logger: logging.Logger, log_level: str | int) -> None:
     """Готовит логгер: уровень + общие хендлеры."""
     logger.setLevel(log_level)
     logger.propagate = False
@@ -61,13 +77,11 @@ def get_logger(name: str) -> logging.Logger:
     """Возвращает отконфигурированный логгер."""
     logger = logging.getLogger(name)
     if not logger.handlers:
-        _configure_logger(logger, log_level=_LOG_LEVEL)
+        _configure_logger(logger, log_level=_SYSTEM_LOG_LEVEL)
     return logger
 
 
 def setup_logging() -> None:
     """Настройка корневого логирования для всего приложения."""
-    for uvicorn_logger_name in ('uvicorn', 'uvicorn.error', 'uvicorn.access'):
-        uvicorn_logger = logging.getLogger(uvicorn_logger_name)
-        uvicorn_logger.handlers = []
-        _configure_logger(uvicorn_logger, log_level=_LOG_LEVEL)
+    _reset_and_configure_loggers(SYSTEM_LOGGER_NAMES, _SYSTEM_LOG_LEVEL)
+    _reset_and_configure_loggers(LIBRARY_LOGGER_NAMES, _LIBRARY_LOG_LEVEL)
