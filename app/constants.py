@@ -33,3 +33,9 @@ LOG_FORMAT = '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
 
 LOG_MAX_BYTES = 30 * 1024 * 1024
 """Максимальный размер файла логов в байтах."""
+
+LIBRARY_LOGGER_NAMES = ('sqlalchemy', 'httpx', 'httpcore')
+"""Логгеры, порог логирования которых поднимается минимум до WARNING."""
+
+SYSTEM_LOGGER_NAMES = ('uvicorn', 'uvicorn.error', 'uvicorn.access')
+"""Логгеры uvicorn, порог логирования которых задается в settings."""
