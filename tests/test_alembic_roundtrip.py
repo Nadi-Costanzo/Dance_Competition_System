@@ -49,37 +49,35 @@ def read_current_revision(db_path: Path) -> str | None:
     return row[0] if row else None
 
 
-def test_fresh_database_reaches_head(tmp_path: Path) -> None:
+def test_fresh_database_reaches_head(test_db_path: Path) -> None:
     """Проверяет, что свежая база данных может быть обновлена до HEAD."""
-    db_path = tmp_path / 'test.db'
-    result = run_alembic(db_path, 'upgrade', 'head')
+    result = run_alembic(test_db_path, 'upgrade', 'head')
     assert result.returncode == 0, (
         f'Ошибка при обновлении БД до HEAD: {result.stderr}'
     )
 
     expected_revision = get_head_revision()
-    current_revision = read_current_revision(db_path)
+    current_revision = read_current_revision(test_db_path)
     assert current_revision == expected_revision, (
         f'Ожидалась ревизия {expected_revision}, получена {current_revision}'
     )
 
 
-def test_roundtrip_upgrade_downgrade_upgrade(tmp_path: Path) -> None:
+def test_roundtrip_upgrade_downgrade_upgrade(test_db_path: Path) -> None:
     """Upgrade -> downgrade -> upgrade возвращает БД к головной revision."""
-    db_path = tmp_path / 'test.db'
     expected_revision = get_head_revision()
 
     # upgrade
-    result = run_alembic(db_path, 'upgrade', 'head')
+    result = run_alembic(test_db_path, 'upgrade', 'head')
     assert result.returncode == 0, result.stderr
-    assert read_current_revision(db_path) == expected_revision
+    assert read_current_revision(test_db_path) == expected_revision
 
     # downgrade до базы
-    result = run_alembic(db_path, 'downgrade', 'base')
+    result = run_alembic(test_db_path, 'downgrade', 'base')
     assert result.returncode == 0, result.stderr
-    assert read_current_revision(db_path) is None
+    assert read_current_revision(test_db_path) is None
 
     # повторный upgrade
-    result = run_alembic(db_path, 'upgrade', 'head')
+    result = run_alembic(test_db_path, 'upgrade', 'head')
     assert result.returncode == 0, result.stderr
-    assert read_current_revision(db_path) == expected_revision
+    assert read_current_revision(test_db_path) == expected_revision
