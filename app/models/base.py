@@ -17,7 +17,7 @@ def sql_values_list(enum_class: type[StrEnum]) -> str:
 
 
 class Base(DeclarativeBase):
-    """Базовый класс ORM: метаданные, первичный ключ, отметки времени."""
+    """Базовый класс ORM: метаданные, первичный ключ, время создания."""
 
     __repr_field__: ClassVar[str | None] = None
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
@@ -29,12 +29,6 @@ class Base(DeclarativeBase):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
-        nullable=False,
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
@@ -49,8 +43,20 @@ class Base(DeclarativeBase):
         )
 
 
-class ActivatableBase(Base):
-    """Базовый класс для таблиц с признаком активности."""
+class MutableBase(Base):
+    """Изменяемые сущности: добавляет время последнего изменения."""
+
+    __abstract__ = True
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+
+class ActivatableBase(MutableBase):
+    """Сущности с признаком активности (мягкое удаление)."""
 
     __abstract__ = True
     is_active: Mapped[bool] = mapped_column(
