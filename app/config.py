@@ -1,6 +1,7 @@
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,6 +29,7 @@ class Settings(BaseSettings):
     log_level: str = 'INFO'
     log_dir: Path = Path('logs')
     root_path: str = ''
+    jwt_secret_key: SecretStr
 
 
 settings = Settings()
