@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile
     environment:
       DCS_DATABASE_URL: sqlite+aiosqlite:////app/data/dcs.db
+      DCS_JWT_SECRET_KEY: ${DCS_JWT_SECRET_KEY:?variable is not set}
     ports:
       - "8443:8443"
     volumes:
