@@ -1,4 +1,4 @@
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable, Generator
 from pathlib import Path
 
 import pytest
@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
 from app.database import enable_sqlite_pragmas
 from app.main import app
 from app.models.base import Base
+from tests.constants import TEST_ERROR_ROUTE
 
 
 @pytest.fixture
@@ -49,3 +50,24 @@ async def test_session_factory(
     async with test_engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
     return session_factory
+
+
+@pytest.fixture
+def client_raising() -> Generator[Callable[..., TestClient], None, None]:
+    """Отдаёт фабрику клиента с маршрутом, возбуждающим заданное исключение."""
+    original = app.router.routes.copy()
+
+    def make_client(
+        error: Exception, raise_server_exceptions: bool = True
+    ) -> TestClient:
+        @app.get(TEST_ERROR_ROUTE)
+        async def _raise_error() -> None:
+            raise error
+
+        return TestClient(
+            app,
+            raise_server_exceptions=raise_server_exceptions,
+        )
+
+    yield make_client
+    app.router.routes[:] = original
