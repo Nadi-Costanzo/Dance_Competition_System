@@ -1,9 +1,18 @@
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from sqlalchemy import event
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.config import settings
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def _apply_sqlite_pragmas(
@@ -29,6 +38,17 @@ def enable_sqlite_pragmas(engine: AsyncEngine) -> None:
 # Асинхронный движок SQLAlchemy для подключения к базе данных.
 async_engine = create_async_engine(settings.database_url)
 enable_sqlite_pragmas(async_engine)
+AsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)
+
+
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    """Открывает асинхронную сессию базы данных на время запроса."""
+    async with AsyncSessionLocal() as async_session:
+        logger.debug('Сессия БД открыта.')
+        try:
+            yield async_session
+        finally:
+            logger.debug('Закрываю сессию БД.')
 
 
 async def initialize_database(database_engine: AsyncEngine) -> None:
