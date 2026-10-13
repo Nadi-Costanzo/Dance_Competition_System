@@ -10,23 +10,37 @@ ERROR_HTTP_STATUS: dict[ErrorCode, int] = {
     ErrorCode.EMAIL_ALREADY_EXISTS: 409,
     ErrorCode.TOKEN_VERSION_EXPIRED: 401,
 }
-DEFAULT_ERROR_STATUS = 409
-"""HTTP-статус для кода, отсутствующего в ERROR_HTTP_STATUS."""
 
-INTEGRITY_ERROR_CODES: dict[str, tuple[ErrorCode, str]] = {
-    'users.email': (ErrorCode.EMAIL_ALREADY_EXISTS, 'Адрес уже занят'),
+ERROR_MESSAGES: dict[ErrorCode, str] = {
+    ErrorCode.INVALID_CREDENTIALS: 'Неверный адрес или пароль.',
+    ErrorCode.ACCOUNT_NOT_ACTIVATED: (
+        'Учётная запись не активирована. Обратитесь к администратору.'
+    ),
+    ErrorCode.ACCOUNT_DISABLED: (
+        'Учётная запись отключена. Обратитесь к администратору.'
+    ),
+    ErrorCode.INVALID_TOKEN: 'Недействительный токен.',
+    ErrorCode.ACCESS_DENIED: 'Доступ запрещён.',
+    ErrorCode.NOT_FOUND: 'Объект не найден.',
+    ErrorCode.EMAIL_ALREADY_EXISTS: 'Адрес уже занят.',
+    ErrorCode.TOKEN_VERSION_EXPIRED: 'Сессия устарела, войдите заново.',
+}
+
+
+INTEGRITY_ERROR_CODES: dict[str, ErrorCode] = {
+    'users.email': ErrorCode.EMAIL_ALREADY_EXISTS,
 }
 
 
 class BusinessError(Exception):
     """Нарушение бизнес-правила. Транслируется в ErrorResponse."""
 
-    def __init__(self, code: ErrorCode, detail: str) -> None:
+    def __init__(self, code: ErrorCode, detail: str | None = None) -> None:
         """Сохраняет код и пояснение, определяет HTTP-статус по коду."""
         self.code = code
-        self.detail = detail
-        self.status_code = ERROR_HTTP_STATUS.get(code, DEFAULT_ERROR_STATUS)
-        super().__init__(detail)
+        self.detail = detail or ERROR_MESSAGES[code]
+        self.status_code = ERROR_HTTP_STATUS[code]
+        super().__init__(self.detail)
 
 
 class TokenValidationError(Exception):

@@ -10,8 +10,8 @@ from app.config import settings
 from app.constants import API_PREFIX
 from app.database import async_engine, initialize_database
 from app.exceptions import (
-    DEFAULT_ERROR_STATUS,
     ERROR_HTTP_STATUS,
+    ERROR_MESSAGES,
     INTEGRITY_ERROR_CODES,
     BusinessError,
 )
@@ -73,7 +73,8 @@ async def integrity_error_handler(
     found = INTEGRITY_ERROR_CODES.get(part.strip())
     if found is None:
         raise error
-    code, detail = found
-    content = ErrorResponse(code=code, detail=detail).model_dump(mode='json')
-    status_code = ERROR_HTTP_STATUS.get(code, DEFAULT_ERROR_STATUS)
-    return JSONResponse(content=content, status_code=status_code)
+    code = found
+    content = ErrorResponse(code=code, detail=ERROR_MESSAGES[code]).model_dump(
+        mode='json'
+    )
+    return JSONResponse(content=content, status_code=ERROR_HTTP_STATUS[code])

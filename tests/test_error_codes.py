@@ -1,11 +1,13 @@
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 
 from app.error_codes import ErrorCode
 from app.exceptions import (
     ERROR_HTTP_STATUS,
+    ERROR_MESSAGES,
     INTEGRITY_ERROR_CODES,
     BusinessError,
 )
@@ -16,6 +18,12 @@ def test_every_error_code_has_http_status() -> None:
     """Для каждого кода определён HTTP-статус."""
     missing = set(ErrorCode) - set(ERROR_HTTP_STATUS)
     assert not missing, f'Отсутствует статус для: {missing}'
+
+
+def test_every_error_code_has_default_message() -> None:
+    """Для каждого кода определён текст по умолчанию."""
+    missing = set(ErrorCode) - set(ERROR_MESSAGES)
+    assert not missing, f'Отсутствует текст по умолчанию для: {missing}'
 
 
 def test_business_error_response_has_detail_and_status(
@@ -49,7 +57,8 @@ def test_known_constraint_translated_to_error_code(
     client_raising: Callable[..., TestClient],
 ) -> None:
     """Предусмотренное ограничение даёт код из INTEGRITY_ERROR_CODES."""
-    expected_code, expected_detail = INTEGRITY_ERROR_CODES['users.email']
+    expected_code = INTEGRITY_ERROR_CODES['users.email']
+    expected_detail = ERROR_MESSAGES[expected_code]
     client = client_raising(
         IntegrityError(
             'stmt', {}, Exception('UNIQUE constraint failed: users.email')
@@ -61,3 +70,11 @@ def test_known_constraint_translated_to_error_code(
     assert response.status_code == ERROR_HTTP_STATUS[expected_code]
     assert data['code'] == expected_code
     assert data['detail'] == expected_detail
+
+
+@pytest.mark.parametrize('code', list(ErrorCode))
+def test_business_error_uses_default_message(code: ErrorCode) -> None:
+    """Без detail берётся текст по умолчанию, он же попадает в str()."""
+    error = BusinessError(code)
+    assert error.detail == ERROR_MESSAGES[code]
+    assert str(error) == error.detail
