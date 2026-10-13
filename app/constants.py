@@ -110,6 +110,10 @@ class SyncOrigin(StrEnum):
 # JWT и аутентификация пользователей
 
 ACCESS_TOKEN_LIFETIME_HOURS = 12
-"""время жизни токена (часы)."""
+"""Время жизни токена (часы)."""
 
 JWT_ALGORITHM = 'HS256'
+"""Алгоритм подписи JWT."""
+
+TOKEN_TYPE = 'bearer'
+"""Тип токена."""
