@@ -105,3 +105,15 @@ class SyncOrigin(StrEnum):
 
     LOCAL = 'local'
     CLOUD = 'cloud'
+
+
+# JWT и аутентификация пользователей
+
+ACCESS_TOKEN_LIFETIME_HOURS = 12
+"""Время жизни токена (часы)."""
+
+JWT_ALGORITHM = 'HS256'
+"""Алгоритм подписи JWT."""
+
+TOKEN_TYPE = 'bearer'
+"""Тип токена."""
