@@ -4,6 +4,7 @@ import time
 from fastapi import APIRouter, Response, status
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
+from app.api.responses import HEALTH_CHECK_RESPONSES
 from app.config import settings
 from app.constants import (
     DB_CHECK_TIMEOUT_S,
@@ -13,8 +14,6 @@ from app.constants import (
 )
 from app.database import async_engine, check_database_connection
 from app.schemas.health import (
-    HEALTH_DEGRADED_EXAMPLE,
-    HEALTH_OK_EXAMPLE,
     DbCheck,
     HealthChecks,
     HealthResponse,
@@ -34,20 +33,7 @@ def _get_app_uptime() -> int:
 @router.get(
     '/health',
     response_model=HealthResponse,
-    responses={
-        status.HTTP_200_OK: {
-            'model': HealthResponse,
-            'description': 'БД подключена, приложение работает',
-            'content': {'application/json': {'example': HEALTH_OK_EXAMPLE}},
-        },
-        status.HTTP_503_SERVICE_UNAVAILABLE: {
-            'model': HealthResponse,
-            'description': 'Отсутствует подключение к БД, приложение работает',
-            'content': {
-                'application/json': {'example': HEALTH_DEGRADED_EXAMPLE}
-            },
-        },
-    },
+    responses=HEALTH_CHECK_RESPONSES,
 )
 async def health_check(response: Response) -> HealthResponse:
     """Проверка состояния приложения.

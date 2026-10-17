@@ -1,11 +1,11 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter
 
+from app.api.responses import AUTH_LOGIN_RESPONSES
 from app.auth.jwt import create_access_token
 from app.constants import TOKEN_TYPE
 from app.database import SessionDep
 from app.logging_config import get_logger
 from app.schemas.auth import AccessTokenResponse, LoginRequestData
-from app.schemas.errors import ErrorResponse
 from app.services.auth import authenticate
 
 router = APIRouter()
@@ -17,18 +17,7 @@ logger = get_logger(__name__)
 @router.post(
     '/login',
     response_model=AccessTokenResponse,
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {
-            'model': ErrorResponse,
-            'description': (
-                'Неверный адрес или пароль; учётная запись не активирована'
-            ),
-        },
-        status.HTTP_403_FORBIDDEN: {
-            'model': ErrorResponse,
-            'description': 'Учётная запись отключена',
-        },
-    },
+    responses=AUTH_LOGIN_RESPONSES,
 )
 async def login(
     user_data: LoginRequestData,
