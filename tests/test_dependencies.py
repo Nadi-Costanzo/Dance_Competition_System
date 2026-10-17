@@ -8,6 +8,7 @@ import jwt
 import pytest
 from fastapi import APIRouter, Depends, status
 
+from app.api.responses import PROTECTED_RESPONSES
 from app.auth.dependencies import require_user
 from app.auth.jwt import create_access_token
 from app.config import settings
@@ -24,7 +25,10 @@ from app.models.user import User
 router = APIRouter(prefix=API_PREFIX)
 
 
-@router.get('/protected')
+@router.get(
+    '/protected',
+    responses=PROTECTED_RESPONSES,
+)
 async def protected(
     user: Annotated[User, Depends(require_user)],
 ) -> dict[str, str]:
@@ -331,3 +335,22 @@ async def test_version_is_checked_before_is_active(
     assert response.headers['www-authenticate'] == 'Bearer'
     assert data['code'] == ErrorCode.TOKEN_VERSION_EXPIRED
     assert data['detail'] == ERROR_MESSAGES[ErrorCode.TOKEN_VERSION_EXPIRED]
+
+
+def test_protected_route_documents_error_responses() -> None:
+    """Спецификация защищённого маршрута документирует отказы зависимости."""
+    operation = app.openapi()['paths'][f'{API_PREFIX}/protected']['get']
+    responses = operation['responses']
+    for code in (
+        ErrorCode.INVALID_TOKEN,
+        ErrorCode.TOKEN_VERSION_EXPIRED,
+        ErrorCode.ACCOUNT_DISABLED,
+    ):
+        status_key = str(ERROR_HTTP_STATUS[code])
+        assert status_key in responses, (
+            f'Статус {status_key} не найден в спецификации.'
+        )
+        schema = responses[status_key]['content']['application/json']
+        assert schema['schema']['$ref'].endswith('ErrorResponse'), (
+            f'Статус {status_key} не ссылается на ErrorResponse.'
+        )
