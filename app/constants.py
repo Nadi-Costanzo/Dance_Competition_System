@@ -117,3 +117,6 @@ JWT_ALGORITHM = 'HS256'
 
 TOKEN_TYPE = 'bearer'
 """Тип токена."""
+
+TOKEN_FORMAT = 'JWT'
+"""Формат токена."""
