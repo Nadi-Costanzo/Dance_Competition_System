@@ -1,6 +1,7 @@
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Annotated, Any
 
+from fastapi import Depends
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -49,6 +50,9 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
             yield async_session
         finally:
             logger.debug('Закрываю сессию БД.')
+
+
+SessionDep = Annotated[AsyncSession, Depends(get_async_session)]
 
 
 async def initialize_database(database_engine: AsyncEngine) -> None:

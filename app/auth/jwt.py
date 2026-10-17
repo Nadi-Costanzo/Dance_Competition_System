@@ -30,11 +30,13 @@ def create_access_token(user_id: uuid.UUID, token_version: int) -> str:
 
 
 def decode_token(token: str) -> dict[str, Any]:
-    """Проверяет подпись и срок действия токена, возвращает payload."""
+    """Проверяет подпись, срок действия и структуру токена."""
     try:
+        # Аргумент options={'require': [...]} делает обязательным наличие полей
         return jwt.decode(
             token,
             settings.jwt_secret_key.get_secret_value(),
+            options={'require': ['exp', 'sub', 'token_version']},
             algorithms=[JWT_ALGORITHM],
         )
     except jwt.InvalidTokenError as error:

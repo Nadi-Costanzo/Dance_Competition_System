@@ -1,11 +1,8 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, status
 
 from app.auth.jwt import create_access_token
 from app.constants import TOKEN_TYPE
-from app.database import get_async_session
+from app.database import SessionDep
 from app.logging_config import get_logger
 from app.schemas.auth import AccessTokenResponse, LoginRequestData
 from app.schemas.errors import ErrorResponse
@@ -13,7 +10,6 @@ from app.services.auth import authenticate
 
 router = APIRouter()
 
-SessionDep = Annotated[AsyncSession, Depends(get_async_session)]
 
 logger = get_logger(__name__)
 
