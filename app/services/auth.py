@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.password import verify_password
+from app.auth.password import hash_password, verify_password
 from app.constants import (
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
@@ -92,3 +92,21 @@ def validate_password_policy(
             ErrorCode.PASSWORD_POLICY_VIOLATION,
             'Новый пароль не должен совпадать с текущим.',
         )
+
+
+async def change_password(
+    session: AsyncSession, user: User, current_password: str, new_password: str
+) -> User:
+    """Меняет пароль по запросу пользователя.
+
+    При отказе возбуждает BusinessError: INVALID_CREDENTIALS,
+    ACCOUNT_NOT_ACTIVATED или PASSWORD_POLICY_VIOLATION.
+    После успеха token_version увеличен, и все выпущенные ранее
+    токены становятся недействительными.
+    """
+    await _require_valid_password(current_password, user.password_hash)
+    validate_password_policy(new_password, user, current_password)
+    user.token_version += 1
+    user.password_hash = await hash_password(new_password)
+    await session.commit()
+    return user
