@@ -1,6 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.password import verify_password
+from app.constants import (
+    PASSWORD_MAX_LENGTH,
+    PASSWORD_MIN_LENGTH,
+    WEAK_PASSWORDS,
+)
 from app.crud.user import get_user_by_email
 from app.error_codes import ErrorCode
 from app.exceptions import BusinessError
@@ -24,3 +29,54 @@ async def authenticate(
     if not user.is_active:
         raise BusinessError(ErrorCode.ACCOUNT_DISABLED)
     return user
+
+
+def _is_monotonic_sequence(password: str) -> bool:
+    """True, если все соседние символы идут с шагом +1 или -1."""
+    diffs = {
+        ord(b) - ord(a)
+        for a, b in zip(
+            password,
+            password[1:],
+            strict=False,
+        )
+    }
+    return diffs in ({1}, {-1})
+
+
+def validate_password_policy(
+    new_password: str, user: User, current_password: str
+) -> None:
+    """Проверяет пароль, при нарушении возбуждает BusinessError."""
+    if not (PASSWORD_MIN_LENGTH <= len(new_password) <= PASSWORD_MAX_LENGTH):
+        raise BusinessError(
+            ErrorCode.PASSWORD_POLICY_VIOLATION,
+            (
+                'Пароль должен содержать от '
+                f'{PASSWORD_MIN_LENGTH} до {PASSWORD_MAX_LENGTH} символов.'
+            ),
+        )
+    if len(set(new_password)) == 1:
+        raise BusinessError(
+            ErrorCode.PASSWORD_POLICY_VIOLATION,
+            'Пароль не должен состоять из одинаковых символов.',
+        )
+    if _is_monotonic_sequence(new_password):
+        raise BusinessError(
+            ErrorCode.PASSWORD_POLICY_VIOLATION,
+            'Пароль не должен быть последовательностью символов.',
+        )
+    if new_password.casefold() in user.email.casefold():
+        raise BusinessError(
+            ErrorCode.PASSWORD_POLICY_VIOLATION,
+            'Пароль не должен быть частью адреса электронной почты.',
+        )
+    if new_password.casefold() in WEAK_PASSWORDS:
+        raise BusinessError(
+            ErrorCode.PASSWORD_POLICY_VIOLATION, 'Слишком простой пароль.'
+        )
+    if new_password == current_password:
+        raise BusinessError(
+            ErrorCode.PASSWORD_POLICY_VIOLATION,
+            'Новый пароль не должен совпадать с текущим.',
+        )

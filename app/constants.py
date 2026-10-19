@@ -120,3 +120,24 @@ TOKEN_TYPE = 'bearer'
 
 TOKEN_FORMAT = 'JWT'
 """Формат токена."""
+
+# Password validation
+PASSWORD_MIN_LENGTH = 8
+"""Минимальная длина пароля."""
+
+PASSWORD_MAX_LENGTH = 128
+"""Максимальная длина пароля."""
+
+WEAK_PASSWORDS: frozenset[str] = frozenset(
+    {
+        '12345678',
+        'qwerty',
+        'password',
+        'gfhjkm',
+        'admin',
+        'flvby',
+        'пароль',
+        'админ',
+    }
+)
+"""Список слабых паролей. Все элементы — в нижнем регистре."""
