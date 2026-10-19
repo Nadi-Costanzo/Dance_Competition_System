@@ -12,25 +12,6 @@ from app.exceptions import BusinessError
 from app.models.user import User
 
 
-async def authenticate(
-    session: AsyncSession, email: str, password: str
-) -> User:
-    """Проверяет email и пароль, возвращает пользователя.
-
-    При отказе возбуждает BusinessError.
-    """
-    user = await get_user_by_email(session, email)
-    if user is None:
-        raise BusinessError(ErrorCode.INVALID_CREDENTIALS)
-    if user.password_hash is None:
-        raise BusinessError(ErrorCode.ACCOUNT_NOT_ACTIVATED)
-    if not await verify_password(password, user.password_hash):
-        raise BusinessError(ErrorCode.INVALID_CREDENTIALS)
-    if not user.is_active:
-        raise BusinessError(ErrorCode.ACCOUNT_DISABLED)
-    return user
-
-
 def _is_monotonic_sequence(password: str) -> bool:
     """True, если все соседние символы идут с шагом +1 или -1."""
     diffs = {
@@ -42,6 +23,37 @@ def _is_monotonic_sequence(password: str) -> bool:
         )
     }
     return diffs in ({1}, {-1})
+
+
+async def _require_valid_password(
+    password: str, password_hash: str | None
+) -> None:
+    """Подтверждает пароль учётной записи.
+
+    Отказ:
+    ACCOUNT_NOT_ACTIVATED, если пароль не задан;
+    INVALID_CREDENTIALS, если переданный пароль не совпадает.
+    """
+    if password_hash is None:
+        raise BusinessError(ErrorCode.ACCOUNT_NOT_ACTIVATED)
+    if not await verify_password(password, password_hash):
+        raise BusinessError(ErrorCode.INVALID_CREDENTIALS)
+
+
+async def authenticate(
+    session: AsyncSession, email: str, password: str
+) -> User:
+    """Проверяет email и пароль, возвращает пользователя.
+
+    При отказе возбуждает BusinessError.
+    """
+    user = await get_user_by_email(session, email)
+    if user is None:
+        raise BusinessError(ErrorCode.INVALID_CREDENTIALS)
+    await _require_valid_password(password, user.password_hash)
+    if not user.is_active:
+        raise BusinessError(ErrorCode.ACCOUNT_DISABLED)
+    return user
 
 
 def validate_password_policy(
