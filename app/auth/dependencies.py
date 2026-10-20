@@ -6,7 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 
 from app.auth.jwt import decode_token
-from app.constants import TOKEN_FORMAT
+from app.constants import TOKEN_FORMAT, UserRole
 from app.database import SessionDep
 from app.error_codes import ErrorCode
 from app.exceptions import BusinessError, TokenValidationError
@@ -75,3 +75,22 @@ async def require_user(
         logger.info('Пользователь %s деактивирован.', user.email)
         raise BusinessError(ErrorCode.ACCOUNT_DISABLED)
     return user
+
+
+CurrentUserDep = Annotated[User, Depends(require_user)]
+
+
+def require_admin(current_user: CurrentUserDep) -> User:
+    """Проверяет права администратора и возвращает пользователя.
+
+    Отказ:
+        `ACCESS_DENIED` — пользователь не является администратором.
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise BusinessError(
+            ErrorCode.ACCESS_DENIED, 'Требуются права администратора'
+        )
+    return current_user
+
+
+AdminUser = Annotated[User, Depends(require_admin)]
