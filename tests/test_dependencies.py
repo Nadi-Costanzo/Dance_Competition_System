@@ -1,15 +1,15 @@
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, Any
+from typing import Any
 
 import httpx
 import jwt
 import pytest
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 
 from app.api.responses import ADMIN_ONLY_RESPONSES, PROTECTED_RESPONSES
-from app.auth.dependencies import AdminUser, require_user
+from app.auth.dependencies import AdminUser, CurrentUserDep
 from app.auth.jwt import create_access_token
 from app.config import settings
 from app.constants import (
@@ -31,7 +31,7 @@ router = APIRouter(prefix=API_PREFIX)
     responses=PROTECTED_RESPONSES,
 )
 async def protected(
-    user: Annotated[User, Depends(require_user)],
+    user: CurrentUserDep,
 ) -> dict[str, str]:
     """Возвращает адрес текущего пользователя."""
     return {'email': user.email}
