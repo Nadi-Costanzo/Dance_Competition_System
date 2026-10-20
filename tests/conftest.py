@@ -160,7 +160,8 @@ async def access_token(
         f'{API_PREFIX}/auth/login',
         json={'email': TEST_EMAIL, 'password': TEST_PASSWORD},
     )
-    return response.json()['access_token']
+    token: str = response.json()['access_token']
+    return token
 
 
 @pytest.fixture
