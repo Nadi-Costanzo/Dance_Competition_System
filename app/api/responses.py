@@ -72,3 +72,14 @@ CHANGE_PASSWORD_RESPONSES: ResponsesDict = {
         ),
     },
 }
+
+ADMIN_ONLY_RESPONSES: ResponsesDict = {
+    **PROTECTED_RESPONSES,
+    status.HTTP_403_FORBIDDEN: {
+        'model': ErrorResponse,
+        'description': (
+            'Учётная запись отключена или у пользователя нет'
+            ' прав администратора'
+        ),
+    },
+}
