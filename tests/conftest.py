@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.auth.password import hash_password
+from app.constants import API_PREFIX
 from app.database import enable_sqlite_pragmas, get_async_session
 from app.main import app
 from app.models.base import Base
@@ -146,3 +147,23 @@ async def create_user(
         return user
 
     yield user_factory
+
+
+@pytest_asyncio.fixture
+async def access_token(
+    async_client: httpx.AsyncClient,
+    create_user: Callable[..., Awaitable[User]],
+) -> str:
+    """Логинит пользователя в системе, возвращает access_token."""
+    await create_user()
+    response = await async_client.post(
+        f'{API_PREFIX}/auth/login',
+        json={'email': TEST_EMAIL, 'password': TEST_PASSWORD},
+    )
+    return response.json()['access_token']
+
+
+@pytest.fixture
+def access_header(access_token: str) -> dict[str, str]:
+    """Оборачивает токен в заголовок Authorization."""
+    return {'Authorization': f'Bearer {access_token}'}
