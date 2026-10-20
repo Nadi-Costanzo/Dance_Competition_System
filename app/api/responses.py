@@ -50,3 +50,25 @@ HEALTH_CHECK_RESPONSES: ResponsesDict = {
         'content': {'application/json': {'example': HEALTH_DEGRADED_EXAMPLE}},
     },
 }
+
+CHANGE_PASSWORD_RESPONSES: ResponsesDict = {
+    status.HTTP_401_UNAUTHORIZED: {
+        'model': ErrorResponse,
+        'description': (
+            'Токен отсутствует, не принят или выпущен для прежней версии'
+            ' пользователя; переданный текущий пароль не совпадает'
+        ),
+    },
+    status.HTTP_403_FORBIDDEN: {
+        'model': ErrorResponse,
+        'description': 'Учётная запись отключена',
+    },
+    status.HTTP_422_UNPROCESSABLE_CONTENT: {
+        'model': ErrorResponse,
+        'description': (
+            'Новый пароль не соответствует политике — ErrorResponse'
+            ' с code PASSWORD_POLICY_VIOLATION. Тело запроса, не прошедшее'
+            ' валидацию схемы, даёт HTTPValidationError'
+        ),
+    },
+}

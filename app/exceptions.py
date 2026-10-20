@@ -9,6 +9,7 @@ ERROR_HTTP_STATUS: dict[ErrorCode, int] = {
     ErrorCode.NOT_FOUND: 404,
     ErrorCode.EMAIL_ALREADY_EXISTS: 409,
     ErrorCode.TOKEN_VERSION_EXPIRED: 401,
+    ErrorCode.PASSWORD_POLICY_VIOLATION: 422,
 }
 
 ERROR_MESSAGES: dict[ErrorCode, str] = {
@@ -24,6 +25,9 @@ ERROR_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.NOT_FOUND: 'Объект не найден.',
     ErrorCode.EMAIL_ALREADY_EXISTS: 'Адрес уже занят.',
     ErrorCode.TOKEN_VERSION_EXPIRED: 'Сессия устарела, войдите заново.',
+    ErrorCode.PASSWORD_POLICY_VIOLATION: (
+        'Пароль не соответствует требованиям безопасности.'
+    ),
 }
 
 

@@ -184,3 +184,103 @@ async def test_invalid_credentials_detail_is_same_for_both_causes(
     first, second = without_user.json(), with_user.json()
     assert first['code'] == second['code'] == ErrorCode.INVALID_CREDENTIALS
     assert first['detail'] == second['detail']
+
+
+@pytest.mark.asyncio
+async def test_change_password_wrong_current_password(
+    async_client: httpx.AsyncClient,
+    access_header: dict[str, str],
+) -> None:
+    """Введён неверный текущий пароль: -> 401 INVALID_CREDENTIALS."""
+    password_request_data = {
+        'current_password': 'Wrong_pass',
+        'new_password': 'футбол1234',
+    }
+    response = await async_client.post(
+        f'{API_PREFIX}/auth/change-password',
+        json=password_request_data,
+        headers=access_header,
+    )
+    data = response.json()
+    assert (
+        response.status_code
+        == ERROR_HTTP_STATUS[ErrorCode.INVALID_CREDENTIALS]
+    )
+    assert data['code'] == ErrorCode.INVALID_CREDENTIALS
+    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_CREDENTIALS]
+
+
+@pytest.mark.asyncio
+async def test_change_password_same_as_current(
+    async_client: httpx.AsyncClient,
+    access_header: dict[str, str],
+) -> None:
+    """Новый пароль совпадает с текущим: -> 422 PASSWORD_POLICY_VIOLATION."""
+    password_request_data = {
+        'current_password': TEST_PASSWORD,
+        'new_password': TEST_PASSWORD,
+    }
+    response = await async_client.post(
+        f'{API_PREFIX}/auth/change-password',
+        json=password_request_data,
+        headers=access_header,
+    )
+    data = response.json()
+    assert (
+        response.status_code
+        == ERROR_HTTP_STATUS[ErrorCode.PASSWORD_POLICY_VIOLATION]
+    )
+    assert data['code'] == ErrorCode.PASSWORD_POLICY_VIOLATION
+    assert 'совпадать' in data['detail']
+
+
+@pytest.mark.asyncio
+async def test_change_password_rotates_token(
+    async_client: httpx.AsyncClient,
+    access_token: str,
+    access_header: dict[str, str],
+) -> None:
+    """Смена пароля выдаёт новый токен и инвалидирует старый.
+
+    - Ответ 200 содержит новый access_token.
+
+    - Старый токен отклоняется с кодом TOKEN_VERSION_EXPIRED.
+
+    - Новый токен даёт доступ к защищённому эндпоинту.
+    """
+    first_password_request_data = {
+        'current_password': TEST_PASSWORD,
+        'new_password': 'футбол1234',
+    }
+    first_response = await async_client.post(
+        f'{API_PREFIX}/auth/change-password',
+        json=first_password_request_data,
+        headers=access_header,
+    )
+    assert first_response.status_code == status.HTTP_200_OK
+
+    new_token = first_response.json()['access_token']
+    second_password_request_data = {
+        'current_password': 'футбол1234',
+        'new_password': 'Турнир-2026',
+    }
+    response_with_old_token = await async_client.post(
+        f'{API_PREFIX}/auth/change-password',
+        json=second_password_request_data,
+        headers={'Authorization': f'Bearer {access_token}'},
+    )
+    assert (
+        response_with_old_token.status_code
+        == ERROR_HTTP_STATUS[ErrorCode.TOKEN_VERSION_EXPIRED]
+    )
+    assert (
+        response_with_old_token.json()['code']
+        == ErrorCode.TOKEN_VERSION_EXPIRED
+    )
+
+    response_with_new_token = await async_client.post(
+        f'{API_PREFIX}/auth/change-password',
+        json=second_password_request_data,
+        headers={'Authorization': f'Bearer {new_token}'},
+    )
+    assert response_with_new_token.status_code == status.HTTP_200_OK

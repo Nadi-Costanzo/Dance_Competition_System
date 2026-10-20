@@ -31,3 +31,11 @@ class AccessTokenResponse(BaseModel):
 
     access_token: str
     token_type: str = TOKEN_TYPE
+
+
+class ChangePasswordRequestData(BaseModel):
+    """Схема данных для смены пароля."""
+
+    model_config = ConfigDict(extra='forbid')
+    current_password: SecretStr
+    new_password: SecretStr
