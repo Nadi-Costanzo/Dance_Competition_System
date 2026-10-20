@@ -8,14 +8,15 @@ import jwt
 import pytest
 from fastapi import APIRouter, Depends, status
 
-from app.api.responses import PROTECTED_RESPONSES
-from app.auth.dependencies import require_user
+from app.api.responses import ADMIN_ONLY_RESPONSES, PROTECTED_RESPONSES
+from app.auth.dependencies import AdminUser, require_user
 from app.auth.jwt import create_access_token
 from app.config import settings
 from app.constants import (
     ACCESS_TOKEN_LIFETIME_HOURS,
     API_PREFIX,
     JWT_ALGORITHM,
+    UserRole,
 )
 from app.error_codes import ErrorCode
 from app.exceptions import ERROR_HTTP_STATUS, ERROR_MESSAGES
@@ -34,6 +35,17 @@ async def protected(
 ) -> dict[str, str]:
     """Возвращает адрес текущего пользователя."""
     return {'email': user.email}
+
+
+@router.get(
+    '/only-admin',
+    responses=ADMIN_ONLY_RESPONSES,
+)
+async def only_admin(
+    admin: AdminUser,
+) -> dict[str, str]:
+    """Возвращает адрес администратора."""
+    return {'email': admin.email}
 
 
 app.include_router(router)
@@ -345,6 +357,78 @@ def test_protected_route_documents_error_responses() -> None:
         ErrorCode.INVALID_TOKEN,
         ErrorCode.TOKEN_VERSION_EXPIRED,
         ErrorCode.ACCOUNT_DISABLED,
+    ):
+        status_key = str(ERROR_HTTP_STATUS[code])
+        assert status_key in responses, (
+            f'Статус {status_key} не найден в спецификации.'
+        )
+        schema = responses[status_key]['content']['application/json']
+        assert schema['schema']['$ref'].endswith('ErrorResponse'), (
+            f'Статус {status_key} не ссылается на ErrorResponse.'
+        )
+
+
+@pytest.mark.asyncio
+async def test_only_admin_allows_admin(
+    async_client: httpx.AsyncClient,
+    create_user: Callable[..., Awaitable[User]],
+) -> None:
+    """Администратор получает 200 и свой email."""
+    user = await create_user(role=UserRole.ADMIN)
+    response = await async_client.get(
+        f'{API_PREFIX}/only-admin', headers=auth_header(user)
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['email'] == user.email
+
+
+@pytest.mark.asyncio
+async def test_only_admin_denies_regular_user(
+    async_client: httpx.AsyncClient,
+    create_user: Callable[..., Awaitable[User]],
+) -> None:
+    """User получает ответ 403 ACCESS_DENIED."""
+    user = await create_user()
+    response = await async_client.get(
+        f'{API_PREFIX}/only-admin', headers=auth_header(user)
+    )
+    data = response.json()
+    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.ACCESS_DENIED]
+    assert data['code'] == ErrorCode.ACCESS_DENIED
+    assert data['detail'] == 'Требуются права администратора'
+
+
+@pytest.mark.asyncio
+async def test_activity_is_checked_before_role(
+    async_client: httpx.AsyncClient,
+    create_user: Callable[..., Awaitable[User]],
+) -> None:
+    """Деактивированный администратор получает ответ 403 ACCOUNT_DISABLED."""
+    user = await create_user(
+        role=UserRole.ADMIN,
+        is_active=False,
+    )
+    response = await async_client.get(
+        f'{API_PREFIX}/only-admin', headers=auth_header(user)
+    )
+    data = response.json()
+    assert (
+        response.status_code == ERROR_HTTP_STATUS[ErrorCode.ACCOUNT_DISABLED]
+    )
+    assert data['code'] == ErrorCode.ACCOUNT_DISABLED
+    assert data['detail'] == ERROR_MESSAGES[ErrorCode.ACCOUNT_DISABLED]
+
+
+@pytest.mark.asyncio
+async def test_only_admin_route_documents_error_responses() -> None:
+    """Спецификация закрытого маршрута документирует отказы зависимости."""
+    operation = app.openapi()['paths'][f'{API_PREFIX}/only-admin']['get']
+    responses = operation['responses']
+    for code in (
+        ErrorCode.INVALID_TOKEN,
+        ErrorCode.TOKEN_VERSION_EXPIRED,
+        ErrorCode.ACCOUNT_DISABLED,
+        ErrorCode.ACCESS_DENIED,
     ):
         status_key = str(ERROR_HTTP_STATUS[code])
         assert status_key in responses, (
