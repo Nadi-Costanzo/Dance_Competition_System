@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.auth.password import hash_password
-from app.constants import API_PREFIX
+from app.constants import API_PREFIX, UserRole
 from app.database import enable_sqlite_pragmas, get_async_session
 from app.main import app
 from app.models.base import Base
@@ -113,21 +113,24 @@ async def create_user(
 ) -> AsyncGenerator[Callable[..., Awaitable[User]], None]:
     """Фабрика пользователей в тестовой базе.
 
-    Возвращает фабрику со своими аргументами: email, password, is_active.
+    Возвращает фабрику со своими аргументами: email, password, is_active, role.
     - password=None создаёт запись без хеша (ACCOUNT_NOT_ACTIVATED)
     - is_active=False — отключённую (ACCOUNT_DISABLED).
+    - role=UserRole.ADMIN — админ.
     """
 
     async def user_factory(
         email: str = TEST_EMAIL,
         password: str | None = TEST_PASSWORD,
         is_active: bool = True,
+        role: UserRole = UserRole.USER,
     ) -> User:
         """Создаёт пользователя в тестовой базе.
 
         Args:
             email: адрес пользователя.
             password: открытый пароль; None — запись без хеша.
+            role: роль пользователя.
             is_active: False — отключённая запись.
         """
         password_hash = (
@@ -138,6 +141,7 @@ async def create_user(
             password_hash=password_hash,
             name='Пользователь',
             surname='Тестовый',
+            role=role,
             is_active=is_active,
         )
 

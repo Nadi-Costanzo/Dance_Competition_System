@@ -1,14 +1,11 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from app.api.responses import AUTH_LOGIN_RESPONSES, CHANGE_PASSWORD_RESPONSES
-from app.auth.dependencies import require_user
+from app.auth.dependencies import CurrentUserDep
 from app.auth.jwt import create_access_token
 from app.constants import TOKEN_TYPE
 from app.database import SessionDep
 from app.logging_config import get_logger
-from app.models.user import User
 from app.schemas.auth import (
     AccessTokenResponse,
     ChangePasswordRequestData,
@@ -57,7 +54,7 @@ async def login(
     responses=CHANGE_PASSWORD_RESPONSES,
 )
 async def change_own_password(
-    user: Annotated[User, Depends(require_user)],
+    user: CurrentUserDep,
     data: ChangePasswordRequestData,
     session: SessionDep,
 ) -> AccessTokenResponse:
