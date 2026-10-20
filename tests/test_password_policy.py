@@ -5,6 +5,7 @@ from app.exceptions import BusinessError
 from app.models.user import User
 from app.services.auth import validate_password_policy
 
+# Пароли, отклоняемые политикой, с фрагментом текста отказа.
 REJECTED_PASSWORDS = [
     pytest.param('Short12', 'должен содержать от', id='too_short'),
     pytest.param(('ab' * 64 + 'c'), 'должен содержать от', id='too_long'),
@@ -18,6 +19,7 @@ REJECTED_PASSWORDS = [
     pytest.param('Турнир-2026', 'совпадать', id='same_as_current_password'),
 ]
 
+# Пароли, принимаемые политикой: граничные и похожие на нарушения.
 ACCEPTED_PASSWORDS = [
     pytest.param('Минимум8', id='at_min_length'),
     pytest.param(('фи' * 64), id='at_max_length'),
@@ -26,7 +28,10 @@ ACCEPTED_PASSWORDS = [
     pytest.param('Турнир-2026-весна', id='extends_current_password'),
 ]
 
+# Пользователь для проверки: его адрес входит в два отклоняемых пароля.
 USER = User(email='a.smirnova@dcs.local', surname='Смирнова', name='Анна')
+
+# Текущий пароль: совпадение с ним отклоняется.
 CURRENT_PASSWORD = 'Турнир-2026'
 
 
