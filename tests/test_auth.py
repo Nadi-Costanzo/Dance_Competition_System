@@ -7,9 +7,9 @@ from fastapi import status
 from app.auth.jwt import decode_token
 from app.constants import API_PREFIX, TOKEN_TYPE
 from app.error_codes import ErrorCode
-from app.exceptions import ERROR_HTTP_STATUS, ERROR_MESSAGES
 from app.models.user import User
 from tests.constants import TEST_PASSWORD, USER_EMAIL
+from tests.helpers import assert_business_error
 
 
 @pytest.mark.asyncio
@@ -37,7 +37,7 @@ async def test_login_correct_credentials_returns_token(
 async def test_login_unknown_email(
     async_client: httpx.AsyncClient,
 ) -> None:
-    """Неизвестный email: ответ 401, INVALID_CREDENTIALS.
+    """Неизвестный email: -> 401, INVALID_CREDENTIALS.
 
     Заголовок WWW-Authenticate: Bearer.
     """
@@ -45,15 +45,8 @@ async def test_login_unknown_email(
         f'{API_PREFIX}/auth/login',
         json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
-    data = response.json()
-
-    assert (
-        response.status_code
-        == ERROR_HTTP_STATUS[ErrorCode.INVALID_CREDENTIALS]
-    )
+    assert_business_error(response, ErrorCode.INVALID_CREDENTIALS)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_CREDENTIALS
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_CREDENTIALS]
 
 
 @pytest.mark.asyncio
@@ -61,7 +54,7 @@ async def test_login_wrong_password_returns_invalid_credentials(
     async_client: httpx.AsyncClient,
     create_user: Callable[..., Awaitable[User]],
 ) -> None:
-    """Неверный пароль: ответ 401, INVALID_CREDENTIALS.
+    """Неверный пароль: -> 401, INVALID_CREDENTIALS.
 
     Заголовок WWW-Authenticate: Bearer.
     """
@@ -71,15 +64,8 @@ async def test_login_wrong_password_returns_invalid_credentials(
         f'{API_PREFIX}/auth/login',
         json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
-    data = response.json()
-
-    assert (
-        response.status_code
-        == ERROR_HTTP_STATUS[ErrorCode.INVALID_CREDENTIALS]
-    )
+    assert_business_error(response, ErrorCode.INVALID_CREDENTIALS)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_CREDENTIALS
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_CREDENTIALS]
 
 
 @pytest.mark.asyncio
@@ -87,7 +73,7 @@ async def test_login_disabled_user_returns_account_disabled(
     async_client: httpx.AsyncClient,
     create_user: Callable[..., Awaitable[User]],
 ) -> None:
-    """Отключённый пользователь, верный пароль: ответ 403.
+    """Отключённый пользователь, верный пароль: -> 403 ACCOUNT_DISABLED.
 
     Заголовка WWW-Authenticate нет: повторное предъявление
     учётных данных не поможет.
@@ -98,14 +84,8 @@ async def test_login_disabled_user_returns_account_disabled(
         f'{API_PREFIX}/auth/login',
         json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
-    data = response.json()
-
-    assert (
-        response.status_code == ERROR_HTTP_STATUS[ErrorCode.ACCOUNT_DISABLED]
-    )
+    assert_business_error(response, ErrorCode.ACCOUNT_DISABLED)
     assert response.headers.get('www-authenticate') is None
-    assert data['code'] == ErrorCode.ACCOUNT_DISABLED
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.ACCOUNT_DISABLED]
 
 
 @pytest.mark.asyncio
@@ -113,7 +93,7 @@ async def test_login_disabled_user_wrong_password(
     async_client: httpx.AsyncClient,
     create_user: Callable[..., Awaitable[User]],
 ) -> None:
-    """Отключённый пользователь, неверный пароль: ответ 401.
+    """Отключённый пользователь, неверный пароль: -> 401 INVALID_CREDENTIALS.
 
     Сведения о деактивации не сообщаются тому, кто не подтвердил
     владение записью: проверка is_active идёт после пароля.
@@ -124,15 +104,8 @@ async def test_login_disabled_user_wrong_password(
         f'{API_PREFIX}/auth/login',
         json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
-    data = response.json()
-
-    assert (
-        response.status_code
-        == ERROR_HTTP_STATUS[ErrorCode.INVALID_CREDENTIALS]
-    )
+    assert_business_error(response, ErrorCode.INVALID_CREDENTIALS)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_CREDENTIALS
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_CREDENTIALS]
 
 
 @pytest.mark.asyncio
@@ -140,7 +113,7 @@ async def test_login_user_without_password_returns_account_not_activated(
     async_client: httpx.AsyncClient,
     create_user: Callable[..., Awaitable[User]],
 ) -> None:
-    """Запись без хеша пароля: ответ 401, ACCOUNT_NOT_ACTIVATED.
+    """Запись без хеша пароля: -> 401, ACCOUNT_NOT_ACTIVATED.
 
     Сравнение паролей не выполняется: password_hash равен None.
     """
@@ -150,15 +123,8 @@ async def test_login_user_without_password_returns_account_not_activated(
         f'{API_PREFIX}/auth/login',
         json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
-    data = response.json()
-
-    assert (
-        response.status_code
-        == ERROR_HTTP_STATUS[ErrorCode.ACCOUNT_NOT_ACTIVATED]
-    )
+    assert_business_error(response, ErrorCode.ACCOUNT_NOT_ACTIVATED)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.ACCOUNT_NOT_ACTIVATED
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.ACCOUNT_NOT_ACTIVATED]
 
 
 @pytest.mark.asyncio
@@ -201,13 +167,7 @@ async def test_change_password_wrong_current_password(
         json=password_request_data,
         headers=user_header,
     )
-    data = response.json()
-    assert (
-        response.status_code
-        == ERROR_HTTP_STATUS[ErrorCode.INVALID_CREDENTIALS]
-    )
-    assert data['code'] == ErrorCode.INVALID_CREDENTIALS
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_CREDENTIALS]
+    assert_business_error(response, ErrorCode.INVALID_CREDENTIALS)
 
 
 @pytest.mark.asyncio
@@ -225,13 +185,11 @@ async def test_change_password_same_as_current(
         json=password_request_data,
         headers=user_header,
     )
-    data = response.json()
-    assert (
-        response.status_code
-        == ERROR_HTTP_STATUS[ErrorCode.PASSWORD_POLICY_VIOLATION]
+    assert_business_error(
+        response,
+        ErrorCode.PASSWORD_POLICY_VIOLATION,
+        'Новый пароль не должен совпадать с текущим.',
     )
-    assert data['code'] == ErrorCode.PASSWORD_POLICY_VIOLATION
-    assert 'совпадать' in data['detail']
 
 
 @pytest.mark.asyncio
@@ -269,15 +227,9 @@ async def test_change_password_rotates_token(
         json=second_password_request_data,
         headers={'Authorization': f'Bearer {user_token}'},
     )
-    assert (
-        response_with_old_token.status_code
-        == ERROR_HTTP_STATUS[ErrorCode.TOKEN_VERSION_EXPIRED]
+    assert_business_error(
+        response_with_old_token, ErrorCode.TOKEN_VERSION_EXPIRED
     )
-    assert (
-        response_with_old_token.json()['code']
-        == ErrorCode.TOKEN_VERSION_EXPIRED
-    )
-
     response_with_new_token = await async_client.post(
         f'{API_PREFIX}/auth/change-password',
         json=second_password_request_data,
