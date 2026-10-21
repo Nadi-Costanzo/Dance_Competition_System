@@ -5,7 +5,7 @@ from fastapi import APIRouter, FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
-from app.api import auth, health
+from app.api import auth, health, users
 from app.config import settings
 from app.constants import API_PREFIX
 from app.database import async_engine, initialize_database
@@ -50,6 +50,7 @@ app = FastAPI(
 api_router = APIRouter(prefix=API_PREFIX)
 api_router.include_router(health.router, tags=['Health'])
 api_router.include_router(auth.router, prefix='/auth', tags=['Auth'])
+api_router.include_router(users.router, prefix='/users', tags=['Users'])
 
 app.include_router(api_router)
 

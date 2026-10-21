@@ -83,3 +83,14 @@ ADMIN_ONLY_RESPONSES: ResponsesDict = {
         ),
     },
 }
+
+FORCE_LOGOUT_RESPONSES: ResponsesDict = {
+    status.HTTP_204_NO_CONTENT: {
+        'description': 'Сессии пользователя завершены',
+    },
+    **ADMIN_ONLY_RESPONSES,
+    status.HTTP_404_NOT_FOUND: {
+        'model': ErrorResponse,
+        'description': 'Пользователь с указанным id не найден',
+    },
+}
