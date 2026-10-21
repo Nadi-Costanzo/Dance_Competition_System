@@ -1,5 +1,5 @@
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Generator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -49,7 +49,17 @@ async def only_admin(
     return {'email': admin.email}
 
 
-app.include_router(router)
+@pytest.fixture(autouse=True)
+def dependency_routes() -> Generator[None, None, None]:
+    """Регистрирует маршруты для проверок и снимает их после теста.
+
+    Приложение одно на весь прогон: без снятия маршруты остались бы
+    видны остальным модулям и попали бы в собранную спецификацию.
+    """
+    original = app.router.routes.copy()
+    app.include_router(router)
+    yield
+    app.router.routes[:] = original
 
 
 def auth_header(
