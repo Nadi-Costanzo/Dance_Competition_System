@@ -19,9 +19,10 @@ from app.constants import (
     UserRole,
 )
 from app.error_codes import ErrorCode
-from app.exceptions import ERROR_HTTP_STATUS, ERROR_MESSAGES
+from app.exceptions import ERROR_HTTP_STATUS
 from app.main import app
 from app.models.user import User
+from tests.helpers import assert_business_error
 
 router = APIRouter(prefix=API_PREFIX)
 
@@ -105,11 +106,8 @@ async def test_protected_route_requires_token(
 ) -> None:
     """Без заголовка Authorization: ответ 401, INVALID_TOKEN."""
     response = await async_client.get(f'{API_PREFIX}/protected')
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.INVALID_TOKEN]
+    assert_business_error(response, ErrorCode.INVALID_TOKEN)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_TOKEN
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_TOKEN]
 
 
 @pytest.mark.asyncio
@@ -120,11 +118,8 @@ async def test_non_bearer_scheme_is_rejected(
     response = await async_client.get(
         f'{API_PREFIX}/protected', headers={'Authorization': 'Basic abc123'}
     )
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.INVALID_TOKEN]
+    assert_business_error(response, ErrorCode.INVALID_TOKEN)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_TOKEN
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_TOKEN]
 
 
 @pytest.mark.asyncio
@@ -136,11 +131,8 @@ async def test_malformed_token_is_rejected(
         f'{API_PREFIX}/protected',
         headers={'Authorization': 'Bearer not-a-jwt'},
     )
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.INVALID_TOKEN]
+    assert_business_error(response, ErrorCode.INVALID_TOKEN)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_TOKEN
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_TOKEN]
 
 
 @pytest.mark.asyncio
@@ -157,11 +149,8 @@ async def test_token_signed_with_another_key_is_rejected(
     response = await async_client.get(
         f'{API_PREFIX}/protected', headers={'Authorization': f'Bearer {token}'}
     )
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.INVALID_TOKEN]
+    assert_business_error(response, ErrorCode.INVALID_TOKEN)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_TOKEN
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_TOKEN]
 
 
 @pytest.mark.asyncio
@@ -177,11 +166,8 @@ async def test_expired_token_is_rejected(
     response = await async_client.get(
         f'{API_PREFIX}/protected', headers={'Authorization': f'Bearer {token}'}
     )
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.INVALID_TOKEN]
+    assert_business_error(response, ErrorCode.INVALID_TOKEN)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_TOKEN
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_TOKEN]
 
 
 @pytest.mark.asyncio
@@ -197,11 +183,8 @@ async def test_token_without_exp_is_rejected(
     response = await async_client.get(
         f'{API_PREFIX}/protected', headers={'Authorization': f'Bearer {token}'}
     )
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.INVALID_TOKEN]
+    assert_business_error(response, ErrorCode.INVALID_TOKEN)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_TOKEN
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_TOKEN]
 
 
 @pytest.mark.asyncio
@@ -209,7 +192,7 @@ async def test_token_with_not_a_uuid_sub_is_rejected(
     async_client: httpx.AsyncClient,
     create_user: Callable[..., Awaitable[User]],
 ) -> None:
-    """Токен с значением sub, не являющимся UUID: ответ 401, INVALID_TOKEN."""
+    """Токен со значением sub, не являющимся UUID: ответ 401, INVALID_TOKEN."""
     user = await create_user()
     payload = valid_payload(user)
     payload['sub'] = 'not-a-uuid'
@@ -217,11 +200,8 @@ async def test_token_with_not_a_uuid_sub_is_rejected(
     response = await async_client.get(
         f'{API_PREFIX}/protected', headers={'Authorization': f'Bearer {token}'}
     )
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.INVALID_TOKEN]
+    assert_business_error(response, ErrorCode.INVALID_TOKEN)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_TOKEN
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_TOKEN]
 
 
 @pytest.mark.asyncio
@@ -237,11 +217,8 @@ async def test_token_with_str_token_version_is_rejected(
     response = await async_client.get(
         f'{API_PREFIX}/protected', headers={'Authorization': f'Bearer {token}'}
     )
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.INVALID_TOKEN]
+    assert_business_error(response, ErrorCode.INVALID_TOKEN)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_TOKEN
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_TOKEN]
 
 
 @pytest.mark.asyncio
@@ -257,11 +234,8 @@ async def test_token_without_token_version_is_rejected(
     response = await async_client.get(
         f'{API_PREFIX}/protected', headers={'Authorization': f'Bearer {token}'}
     )
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.INVALID_TOKEN]
+    assert_business_error(response, ErrorCode.INVALID_TOKEN)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_TOKEN
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_TOKEN]
 
 
 @pytest.mark.asyncio
@@ -277,11 +251,8 @@ async def test_token_with_unknown_sub_is_rejected(
     response = await async_client.get(
         f'{API_PREFIX}/protected', headers={'Authorization': f'Bearer {token}'}
     )
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.INVALID_TOKEN]
+    assert_business_error(response, ErrorCode.INVALID_TOKEN)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.INVALID_TOKEN
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.INVALID_TOKEN]
 
 
 @pytest.mark.asyncio
@@ -295,14 +266,8 @@ async def test_stale_token_version_is_rejected(
         f'{API_PREFIX}/protected',
         headers=auth_header(user, user.token_version + 1),
     )
-    data = response.json()
-    assert (
-        response.status_code
-        == ERROR_HTTP_STATUS[ErrorCode.TOKEN_VERSION_EXPIRED]
-    )
+    assert_business_error(response, ErrorCode.TOKEN_VERSION_EXPIRED)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.TOKEN_VERSION_EXPIRED
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.TOKEN_VERSION_EXPIRED]
 
 
 @pytest.mark.asyncio
@@ -315,13 +280,8 @@ async def test_disabled_user_is_rejected(
     response = await async_client.get(
         f'{API_PREFIX}/protected', headers=auth_header(user)
     )
-    data = response.json()
-    assert (
-        response.status_code == ERROR_HTTP_STATUS[ErrorCode.ACCOUNT_DISABLED]
-    )
+    assert_business_error(response, ErrorCode.ACCOUNT_DISABLED)
     assert 'www-authenticate' not in response.headers
-    assert data['code'] == ErrorCode.ACCOUNT_DISABLED
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.ACCOUNT_DISABLED]
 
 
 @pytest.mark.asyncio
@@ -339,14 +299,8 @@ async def test_version_is_checked_before_is_active(
         f'{API_PREFIX}/protected',
         headers=auth_header(user, user.token_version + 1),
     )
-    data = response.json()
-    assert (
-        response.status_code
-        == ERROR_HTTP_STATUS[ErrorCode.TOKEN_VERSION_EXPIRED]
-    )
+    assert_business_error(response, ErrorCode.TOKEN_VERSION_EXPIRED)
     assert response.headers['www-authenticate'] == 'Bearer'
-    assert data['code'] == ErrorCode.TOKEN_VERSION_EXPIRED
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.TOKEN_VERSION_EXPIRED]
 
 
 def test_protected_route_documents_error_responses() -> None:
@@ -392,10 +346,9 @@ async def test_only_admin_denies_regular_user(
     response = await async_client.get(
         f'{API_PREFIX}/only-admin', headers=auth_header(user)
     )
-    data = response.json()
-    assert response.status_code == ERROR_HTTP_STATUS[ErrorCode.ACCESS_DENIED]
-    assert data['code'] == ErrorCode.ACCESS_DENIED
-    assert data['detail'] == 'Требуются права администратора'
+    assert_business_error(
+        response, ErrorCode.ACCESS_DENIED, 'Требуются права администратора'
+    )
 
 
 @pytest.mark.asyncio
@@ -411,12 +364,7 @@ async def test_activity_is_checked_before_role(
     response = await async_client.get(
         f'{API_PREFIX}/only-admin', headers=auth_header(user)
     )
-    data = response.json()
-    assert (
-        response.status_code == ERROR_HTTP_STATUS[ErrorCode.ACCOUNT_DISABLED]
-    )
-    assert data['code'] == ErrorCode.ACCOUNT_DISABLED
-    assert data['detail'] == ERROR_MESSAGES[ErrorCode.ACCOUNT_DISABLED]
+    assert_business_error(response, ErrorCode.ACCOUNT_DISABLED)
 
 
 @pytest.mark.asyncio
