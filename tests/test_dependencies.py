@@ -99,12 +99,12 @@ def valid_payload(user: User) -> dict[str, Any]:
 @pytest.mark.asyncio
 async def test_valid_token_returns_current_user(
     async_client: httpx.AsyncClient,
-    create_user: Callable[..., Awaitable[User]],
+    user: User,
+    user_header: dict[str, str],
 ) -> None:
-    """Валидный токен: ответ 200 и адрес текущего пользователя."""
-    user = await create_user()
+    """Валидный токен: ответ 200 и email текущего пользователя."""
     response = await async_client.get(
-        f'{API_PREFIX}/protected', headers=auth_header(user)
+        f'{API_PREFIX}/protected', headers=user_header
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json()['email'] == user.email
@@ -286,9 +286,9 @@ async def test_disabled_user_is_rejected(
     create_user: Callable[..., Awaitable[User]],
 ) -> None:
     """Отключённый пользователь, верный токен: ответ 403, ACCOUNT_DISABLED."""
-    user = await create_user(is_active=False)
+    deactivated_user = await create_user(is_active=False)
     response = await async_client.get(
-        f'{API_PREFIX}/protected', headers=auth_header(user)
+        f'{API_PREFIX}/protected', headers=auth_header(deactivated_user)
     )
     assert_business_error(response, ErrorCode.ACCOUNT_DISABLED)
     assert 'www-authenticate' not in response.headers
@@ -335,26 +335,25 @@ def test_protected_route_documents_error_responses() -> None:
 @pytest.mark.asyncio
 async def test_only_admin_allows_admin(
     async_client: httpx.AsyncClient,
-    create_user: Callable[..., Awaitable[User]],
+    admin: User,
+    admin_header: dict[str, str],
 ) -> None:
     """Администратор получает 200 и свой email."""
-    user = await create_user(role=UserRole.ADMIN)
     response = await async_client.get(
-        f'{API_PREFIX}/only-admin', headers=auth_header(user)
+        f'{API_PREFIX}/only-admin', headers=admin_header
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()['email'] == user.email
+    assert response.json()['email'] == admin.email
 
 
 @pytest.mark.asyncio
 async def test_only_admin_denies_regular_user(
     async_client: httpx.AsyncClient,
-    create_user: Callable[..., Awaitable[User]],
+    user_header: dict[str, str],
 ) -> None:
     """User получает ответ 403 ACCESS_DENIED."""
-    user = await create_user()
     response = await async_client.get(
-        f'{API_PREFIX}/only-admin', headers=auth_header(user)
+        f'{API_PREFIX}/only-admin', headers=user_header
     )
     assert_business_error(
         response, ErrorCode.ACCESS_DENIED, 'Требуются права администратора'
@@ -367,12 +366,12 @@ async def test_activity_is_checked_before_role(
     create_user: Callable[..., Awaitable[User]],
 ) -> None:
     """Деактивированный администратор получает ответ 403 ACCOUNT_DISABLED."""
-    user = await create_user(
+    deactivated_admin = await create_user(
         role=UserRole.ADMIN,
         is_active=False,
     )
     response = await async_client.get(
-        f'{API_PREFIX}/only-admin', headers=auth_header(user)
+        f'{API_PREFIX}/only-admin', headers=auth_header(deactivated_admin)
     )
     assert_business_error(response, ErrorCode.ACCOUNT_DISABLED)
 

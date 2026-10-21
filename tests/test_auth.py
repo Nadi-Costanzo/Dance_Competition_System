@@ -9,7 +9,7 @@ from app.constants import API_PREFIX, TOKEN_TYPE
 from app.error_codes import ErrorCode
 from app.models.user import User
 from tests.constants import TEST_PASSWORD, USER_EMAIL
-from tests.helpers import assert_business_error
+from tests.helpers import assert_business_error, login_body
 
 
 @pytest.mark.asyncio
@@ -21,8 +21,7 @@ async def test_login_correct_credentials_returns_token(
     user = await create_user()
 
     response = await async_client.post(
-        f'{API_PREFIX}/auth/login',
-        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
+        f'{API_PREFIX}/auth/login', json=login_body(USER_EMAIL)
     )
     data = response.json()
 
@@ -42,8 +41,7 @@ async def test_login_unknown_email(
     Заголовок WWW-Authenticate: Bearer.
     """
     response = await async_client.post(
-        f'{API_PREFIX}/auth/login',
-        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
+        f'{API_PREFIX}/auth/login', json=login_body(USER_EMAIL)
     )
     assert_business_error(response, ErrorCode.INVALID_CREDENTIALS)
     assert response.headers['www-authenticate'] == 'Bearer'
@@ -61,8 +59,7 @@ async def test_login_wrong_password_returns_invalid_credentials(
     await create_user(password='another_password')
 
     response = await async_client.post(
-        f'{API_PREFIX}/auth/login',
-        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
+        f'{API_PREFIX}/auth/login', json=login_body(USER_EMAIL)
     )
     assert_business_error(response, ErrorCode.INVALID_CREDENTIALS)
     assert response.headers['www-authenticate'] == 'Bearer'
@@ -81,8 +78,7 @@ async def test_login_disabled_user_returns_account_disabled(
     await create_user(is_active=False)
 
     response = await async_client.post(
-        f'{API_PREFIX}/auth/login',
-        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
+        f'{API_PREFIX}/auth/login', json=login_body(USER_EMAIL)
     )
     assert_business_error(response, ErrorCode.ACCOUNT_DISABLED)
     assert response.headers.get('www-authenticate') is None
@@ -101,8 +97,7 @@ async def test_login_disabled_user_wrong_password(
     await create_user(password='another_password', is_active=False)
 
     response = await async_client.post(
-        f'{API_PREFIX}/auth/login',
-        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
+        f'{API_PREFIX}/auth/login', json=login_body(USER_EMAIL)
     )
     assert_business_error(response, ErrorCode.INVALID_CREDENTIALS)
     assert response.headers['www-authenticate'] == 'Bearer'
@@ -120,8 +115,7 @@ async def test_login_user_without_password_returns_account_not_activated(
     await create_user(password=None)
 
     response = await async_client.post(
-        f'{API_PREFIX}/auth/login',
-        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
+        f'{API_PREFIX}/auth/login', json=login_body(USER_EMAIL)
     )
     assert_business_error(response, ErrorCode.ACCOUNT_NOT_ACTIVATED)
     assert response.headers['www-authenticate'] == 'Bearer'
@@ -137,17 +131,18 @@ async def test_invalid_credentials_detail_is_same_for_both_causes(
     Разные тексты позволили бы перебором установить, какие адреса
     зарегистрированы.
     """
-    request_body = {'email': USER_EMAIL, 'password': TEST_PASSWORD}
-
-    without_user = await async_client.post(
-        f'{API_PREFIX}/auth/login', json=request_body
+    unknown_email_response = await async_client.post(
+        f'{API_PREFIX}/auth/login', json=login_body(USER_EMAIL)
     )
     await create_user(password='another_password')
-    with_user = await async_client.post(
-        f'{API_PREFIX}/auth/login', json=request_body
+    wrong_password_response = await async_client.post(
+        f'{API_PREFIX}/auth/login', json=login_body(USER_EMAIL)
     )
 
-    first, second = without_user.json(), with_user.json()
+    first, second = (
+        unknown_email_response.json(),
+        wrong_password_response.json(),
+    )
     assert first['code'] == second['code'] == ErrorCode.INVALID_CREDENTIALS
     assert first['detail'] == second['detail']
 
