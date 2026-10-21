@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.password import hash_password, verify_password
@@ -6,7 +8,7 @@ from app.constants import (
     PASSWORD_MIN_LENGTH,
     WEAK_PASSWORDS,
 )
-from app.crud.user import get_user_by_email
+from app.crud.user import get_user_by_email, increment_token_version
 from app.error_codes import ErrorCode
 from app.exceptions import BusinessError
 from app.models.user import User
@@ -110,3 +112,15 @@ async def change_password(
     user.password_hash = await hash_password(new_password)
     await session.commit()
     return user
+
+
+async def force_logout(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Увеличивает `token_version` пользователя.
+
+    Отказ:
+        - `NOT_FOUND` — пользователя с указанным id нет.
+    """
+    new_token_version = await increment_token_version(session, user_id)
+    if new_token_version is None:
+        raise BusinessError(ErrorCode.NOT_FOUND)
+    await session.commit()
