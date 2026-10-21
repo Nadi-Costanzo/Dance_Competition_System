@@ -4,6 +4,7 @@ from pathlib import Path
 import httpx
 import pytest
 import pytest_asyncio
+from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -18,7 +19,13 @@ from app.database import enable_sqlite_pragmas, get_async_session
 from app.main import app
 from app.models.base import Base
 from app.models.user import User
-from tests.constants import TEST_EMAIL, TEST_ERROR_ROUTE, TEST_PASSWORD
+from tests.constants import (
+    ADMIN_EMAIL,
+    OTHER_EMAIL,
+    TEST_ERROR_ROUTE,
+    TEST_PASSWORD,
+    USER_EMAIL,
+)
 
 
 @pytest.fixture
@@ -113,14 +120,18 @@ async def create_user(
 ) -> AsyncGenerator[Callable[..., Awaitable[User]], None]:
     """Фабрика пользователей в тестовой базе.
 
-    Возвращает фабрику со своими аргументами: email, password, is_active, role.
-    - password=None создаёт запись без хеша (ACCOUNT_NOT_ACTIVATED)
-    - is_active=False — отключённую (ACCOUNT_DISABLED).
-    - role=UserRole.ADMIN — админ.
+    Возвращает отсоединённый от сессии объект: атрибуты читаются,
+    изменения в базу не попадают.
+
+    Аргументы:
+    - `email`
+    - `password`=None создаёт запись без хеша (ACCOUNT_NOT_ACTIVATED)
+    - `is_active`=False — отключённую (ACCOUNT_DISABLED).
+    - `role`=UserRole.ADMIN — админ.
     """
 
-    async def user_factory(
-        email: str = TEST_EMAIL,
+    async def _create_user(
+        email: str = USER_EMAIL,
         password: str | None = TEST_PASSWORD,
         is_active: bool = True,
         role: UserRole = UserRole.USER,
@@ -150,25 +161,84 @@ async def create_user(
             await session.commit()
         return user
 
-    yield user_factory
+    yield _create_user
 
 
 @pytest_asyncio.fixture
-async def access_token(
+async def login(
     async_client: httpx.AsyncClient,
-    create_user: Callable[..., Awaitable[User]],
-) -> str:
-    """Логинит пользователя в системе, возвращает access_token."""
-    await create_user()
-    response = await async_client.post(
-        f'{API_PREFIX}/auth/login',
-        json={'email': TEST_EMAIL, 'password': TEST_PASSWORD},
-    )
-    token: str = response.json()['access_token']
-    return token
+) -> AsyncGenerator[Callable[..., Awaitable[str]], None]:
+    """УСПЕШНЫЙ логин пользователя в системе, возвращает access_token.
+
+    Падает, если вход неуспешен: для отрицательных сценариев
+    обращайтесь к `async_client` напрямую.
+    """
+
+    async def _login(email: str, password: str = TEST_PASSWORD) -> str:
+        response = await async_client.post(
+            f'{API_PREFIX}/auth/login',
+            json={'email': email, 'password': password},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        token: str = response.json()['access_token']
+        return token
+
+    yield _login
+
+
+@pytest_asyncio.fixture
+async def user(create_user: Callable[..., Awaitable[User]]) -> User:
+    """Обычный пользователь в тестовой базе."""
+    return await create_user(email=USER_EMAIL)
+
+
+@pytest_asyncio.fixture
+async def user_token(login: Callable[..., Awaitable[str]], user: User) -> str:
+    """Токен обычного пользователя."""
+    return await login(USER_EMAIL)
 
 
 @pytest.fixture
-def access_header(access_token: str) -> dict[str, str]:
-    """Оборачивает токен в заголовок Authorization."""
-    return {'Authorization': f'Bearer {access_token}'}
+def user_header(user_token: str) -> dict[str, str]:
+    """Заголовок Authorization обычного пользователя."""
+    return {'Authorization': f'Bearer {user_token}'}
+
+
+@pytest_asyncio.fixture
+async def admin(create_user: Callable[..., Awaitable[User]]) -> User:
+    """Администратор в тестовой базе."""
+    return await create_user(email=ADMIN_EMAIL, role=UserRole.ADMIN)
+
+
+@pytest_asyncio.fixture
+async def admin_token(
+    login: Callable[..., Awaitable[str]], admin: User
+) -> str:
+    """Токен администратора."""
+    return await login(ADMIN_EMAIL)
+
+
+@pytest.fixture
+def admin_header(admin_token: str) -> dict[str, str]:
+    """Заголовок Authorization администратора."""
+    return {'Authorization': f'Bearer {admin_token}'}
+
+
+@pytest_asyncio.fixture
+async def other_user(create_user: Callable[..., Awaitable[User]]) -> User:
+    """Другой пользователь в тестовой базе."""
+    return await create_user(email=OTHER_EMAIL)
+
+
+@pytest_asyncio.fixture
+async def other_token(
+    login: Callable[..., Awaitable[str]], other_user: User
+) -> str:
+    """Токен другого пользователя."""
+    return await login(OTHER_EMAIL)
+
+
+@pytest.fixture
+def other_header(other_token: str) -> dict[str, str]:
+    """Заголовок Authorization другого пользователя."""
+    return {'Authorization': f'Bearer {other_token}'}
