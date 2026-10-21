@@ -9,7 +9,7 @@ from app.constants import API_PREFIX, TOKEN_TYPE
 from app.error_codes import ErrorCode
 from app.exceptions import ERROR_HTTP_STATUS, ERROR_MESSAGES
 from app.models.user import User
-from tests.constants import TEST_EMAIL, TEST_PASSWORD
+from tests.constants import TEST_PASSWORD, USER_EMAIL
 
 
 @pytest.mark.asyncio
@@ -22,7 +22,7 @@ async def test_login_correct_credentials_returns_token(
 
     response = await async_client.post(
         f'{API_PREFIX}/auth/login',
-        json={'email': TEST_EMAIL, 'password': TEST_PASSWORD},
+        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
     data = response.json()
 
@@ -43,7 +43,7 @@ async def test_login_unknown_email(
     """
     response = await async_client.post(
         f'{API_PREFIX}/auth/login',
-        json={'email': TEST_EMAIL, 'password': TEST_PASSWORD},
+        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
     data = response.json()
 
@@ -69,7 +69,7 @@ async def test_login_wrong_password_returns_invalid_credentials(
 
     response = await async_client.post(
         f'{API_PREFIX}/auth/login',
-        json={'email': TEST_EMAIL, 'password': TEST_PASSWORD},
+        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
     data = response.json()
 
@@ -96,7 +96,7 @@ async def test_login_disabled_user_returns_account_disabled(
 
     response = await async_client.post(
         f'{API_PREFIX}/auth/login',
-        json={'email': TEST_EMAIL, 'password': TEST_PASSWORD},
+        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
     data = response.json()
 
@@ -122,7 +122,7 @@ async def test_login_disabled_user_wrong_password(
 
     response = await async_client.post(
         f'{API_PREFIX}/auth/login',
-        json={'email': TEST_EMAIL, 'password': TEST_PASSWORD},
+        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
     data = response.json()
 
@@ -148,7 +148,7 @@ async def test_login_user_without_password_returns_account_not_activated(
 
     response = await async_client.post(
         f'{API_PREFIX}/auth/login',
-        json={'email': TEST_EMAIL, 'password': TEST_PASSWORD},
+        json={'email': USER_EMAIL, 'password': TEST_PASSWORD},
     )
     data = response.json()
 
@@ -171,7 +171,7 @@ async def test_invalid_credentials_detail_is_same_for_both_causes(
     Разные тексты позволили бы перебором установить, какие адреса
     зарегистрированы.
     """
-    request_body = {'email': TEST_EMAIL, 'password': TEST_PASSWORD}
+    request_body = {'email': USER_EMAIL, 'password': TEST_PASSWORD}
 
     without_user = await async_client.post(
         f'{API_PREFIX}/auth/login', json=request_body
@@ -189,7 +189,7 @@ async def test_invalid_credentials_detail_is_same_for_both_causes(
 @pytest.mark.asyncio
 async def test_change_password_wrong_current_password(
     async_client: httpx.AsyncClient,
-    access_header: dict[str, str],
+    user_header: dict[str, str],
 ) -> None:
     """Введён неверный текущий пароль: -> 401 INVALID_CREDENTIALS."""
     password_request_data = {
@@ -199,7 +199,7 @@ async def test_change_password_wrong_current_password(
     response = await async_client.post(
         f'{API_PREFIX}/auth/change-password',
         json=password_request_data,
-        headers=access_header,
+        headers=user_header,
     )
     data = response.json()
     assert (
@@ -213,7 +213,7 @@ async def test_change_password_wrong_current_password(
 @pytest.mark.asyncio
 async def test_change_password_same_as_current(
     async_client: httpx.AsyncClient,
-    access_header: dict[str, str],
+    user_header: dict[str, str],
 ) -> None:
     """Новый пароль совпадает с текущим: -> 422 PASSWORD_POLICY_VIOLATION."""
     password_request_data = {
@@ -223,7 +223,7 @@ async def test_change_password_same_as_current(
     response = await async_client.post(
         f'{API_PREFIX}/auth/change-password',
         json=password_request_data,
-        headers=access_header,
+        headers=user_header,
     )
     data = response.json()
     assert (
@@ -237,8 +237,8 @@ async def test_change_password_same_as_current(
 @pytest.mark.asyncio
 async def test_change_password_rotates_token(
     async_client: httpx.AsyncClient,
-    access_token: str,
-    access_header: dict[str, str],
+    user_token: str,
+    user_header: dict[str, str],
 ) -> None:
     """Смена пароля выдаёт новый токен и инвалидирует старый.
 
@@ -255,7 +255,7 @@ async def test_change_password_rotates_token(
     first_response = await async_client.post(
         f'{API_PREFIX}/auth/change-password',
         json=first_password_request_data,
-        headers=access_header,
+        headers=user_header,
     )
     assert first_response.status_code == status.HTTP_200_OK
 
@@ -267,7 +267,7 @@ async def test_change_password_rotates_token(
     response_with_old_token = await async_client.post(
         f'{API_PREFIX}/auth/change-password',
         json=second_password_request_data,
-        headers={'Authorization': f'Bearer {access_token}'},
+        headers={'Authorization': f'Bearer {user_token}'},
     )
     assert (
         response_with_old_token.status_code
