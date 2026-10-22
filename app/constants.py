@@ -128,6 +128,9 @@ PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 128
 """Максимальная длина пароля."""
 
+TEMPORARY_PASSWORD_BYTES: int = 8
+"""Байт энтропии временного пароля: 8 байт дают 16 hex-символов."""
+
 WEAK_PASSWORDS: frozenset[str] = frozenset(
     {
         '12345678',
