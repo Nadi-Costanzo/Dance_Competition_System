@@ -68,15 +68,13 @@ async def change_own_password(
 
     - Возвращает статус 422 — новый пароль не прошёл политику.
     """
-    updated_user = await change_password(
+    new_token_version = await change_password(
         session=session,
         user=user,
         current_password=data.current_password.get_secret_value(),
         new_password=data.new_password.get_secret_value(),
     )
-    access_token = create_access_token(
-        updated_user.id, updated_user.token_version
-    )
+    access_token = create_access_token(user.id, new_token_version)
     logger.info('Пароль пользователя %s успешно изменён', user.email)
     return AccessTokenResponse(
         access_token=access_token, token_type=TOKEN_TYPE

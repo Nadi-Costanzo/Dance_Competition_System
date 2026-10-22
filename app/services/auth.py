@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.password import hash_password, verify_password
@@ -6,7 +8,11 @@ from app.constants import (
     PASSWORD_MIN_LENGTH,
     WEAK_PASSWORDS,
 )
-from app.crud.user import get_user_by_email
+from app.crud.user import (
+    get_user_by_email,
+    increment_token_version,
+    set_password_and_increment_version,
+)
 from app.error_codes import ErrorCode
 from app.exceptions import BusinessError
 from app.models.user import User
@@ -96,17 +102,36 @@ def validate_password_policy(
 
 async def change_password(
     session: AsyncSession, user: User, current_password: str, new_password: str
-) -> User:
-    """Меняет пароль по запросу пользователя.
+) -> int:
+    """Меняет пароль пользователя и возвращает новое значение `token_version`.
 
-    При отказе возбуждает BusinessError: INVALID_CREDENTIALS,
-    ACCOUNT_NOT_ACTIVATED или PASSWORD_POLICY_VIOLATION.
-    После успеха token_version увеличен, и все выпущенные ранее
-    токены становятся недействительными.
+    Все выпущенные ранее токены становятся недействительными.
+
+    Отказ:
+        - `INVALID_CREDENTIALS` — текущий пароль не совпадает;
+        - `ACCOUNT_NOT_ACTIVATED` — пароль не задан;
+        - `PASSWORD_POLICY_VIOLATION` — новый пароль не прошёл политику;
+        - `INVALID_TOKEN` — пользователь не найден при обновлении.
     """
     await _require_valid_password(current_password, user.password_hash)
     validate_password_policy(new_password, user, current_password)
-    user.token_version += 1
-    user.password_hash = await hash_password(new_password)
+    new_hash = await hash_password(new_password)
+    new_token_version = await set_password_and_increment_version(
+        session, user.id, new_hash
+    )
+    if new_token_version is None:
+        raise BusinessError(ErrorCode.INVALID_TOKEN)
     await session.commit()
-    return user
+    return new_token_version
+
+
+async def force_logout(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Увеличивает `token_version` пользователя.
+
+    Отказ:
+        - `NOT_FOUND` — пользователя с указанным id нет.
+    """
+    new_token_version = await increment_token_version(session, user_id)
+    if new_token_version is None:
+        raise BusinessError(ErrorCode.NOT_FOUND)
+    await session.commit()
