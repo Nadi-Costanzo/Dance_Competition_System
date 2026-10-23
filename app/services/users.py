@@ -27,7 +27,8 @@ def _announce_first_admin(password: str, password_file: Path) -> None:
     """
     print(
         f'Временный пароль администратора {FIRST_ADMIN_EMAIL}: {password}\n'
-        f'Пароль сохранён в файл {password_file} и показан один раз.'
+        f'Пароль сохранён в файл {password_file} и показан один раз.',
+        flush=True,
     )
     logger.info(
         'Создан первый администратор: адрес %s, пароль в файле %s.',
