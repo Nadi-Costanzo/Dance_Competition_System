@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants import FIRST_ADMIN_EMAIL, UserRole
 from app.models.user import User
 
 
@@ -57,3 +58,26 @@ async def set_password_and_increment_version(
     )
     new_version: int | None = await session.scalar(stmt)
     return new_version
+
+
+async def has_users(session: AsyncSession) -> bool:
+    """Возвращает True, если в БД есть хотя бы один пользователь."""
+    return await session.scalar(select(User.id).limit(1)) is not None
+
+
+async def add_first_admin(session: AsyncSession, password_hash: str) -> User:
+    """Добавляет запись первого администратора.
+
+    Адрес, ФИО и роль фиксированы, варьируется только хеш пароля.
+    Проверку пустой базы и фиксацию транзакции выполняет вызывающий слой.
+    """
+    admin = User(
+        email=FIRST_ADMIN_EMAIL,
+        password_hash=password_hash,
+        surname='Admin',
+        name='Admin',
+        role=UserRole.ADMIN,
+    )
+    session.add(admin)
+    await session.flush()
+    return admin

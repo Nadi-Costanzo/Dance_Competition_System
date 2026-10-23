@@ -1,4 +1,5 @@
 from enum import StrEnum
+from pathlib import Path
 
 NAMING_CONVENTION = {
     'ix': 'ix_%(column_0_label)s',
@@ -144,3 +145,9 @@ WEAK_PASSWORDS: frozenset[str] = frozenset(
     }
 )
 """Список слабых паролей. Все элементы — в нижнем регистре."""
+
+FIRST_ADMIN_EMAIL: str = 'admin@dcs.example'
+"""Адрес первого администратора, создаваемого при пустой базе."""
+
+FIRST_ADMIN_PASSWORD_FILE: Path = Path('admin_password.txt')
+"""Файл с временным паролем первого администратора."""
