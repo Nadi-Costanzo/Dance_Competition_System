@@ -35,3 +35,6 @@ Thumbs.db
 
 # Logs
 logs/
+
+# Secret data
+admin_password.txt

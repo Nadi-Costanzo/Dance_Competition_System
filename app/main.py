@@ -7,8 +7,8 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api import auth, health, users
 from app.config import settings
-from app.constants import API_PREFIX
-from app.database import async_engine, initialize_database
+from app.constants import API_PREFIX, FIRST_ADMIN_PASSWORD_FILE
+from app.database import AsyncSessionLocal, async_engine, initialize_database
 from app.exceptions import (
     ERROR_HTTP_STATUS,
     ERROR_MESSAGES,
@@ -17,6 +17,7 @@ from app.exceptions import (
 )
 from app.logging_config import get_logger, setup_logging
 from app.schemas.errors import ErrorResponse
+from app.services.users import ensure_first_admin
 
 setup_logging()
 logger = get_logger(__name__)
@@ -27,14 +28,26 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     """Управляет ресурсами приложения при его запуске и остановке."""
     logger.info('Запуск приложения...')
     try:
-        logger.info('Инициализация БД.')
-        await initialize_database(async_engine)
-        logger.info('БД успешно инициализирована.')
+        try:
+            logger.info('Инициализация БД.')
+            await initialize_database(async_engine)
+            logger.info('БД успешно инициализирована.')
+        except Exception:
+            logger.exception(
+                'Приложение не запущено: ошибка инициализации БД.'
+            )
+            raise
+        try:
+            async with AsyncSessionLocal() as session:
+                await ensure_first_admin(session, FIRST_ADMIN_PASSWORD_FILE)
+        except Exception:
+            logger.exception(
+                'Приложение не запущено: '
+                'ошибка создания первого администратора.'
+            )
+            raise
         yield
         logger.info('Завершение работы приложения.')
-    except Exception:
-        logger.exception('Приложение не запущено: ошибка инициализации БД.')
-        raise
     finally:
         await async_engine.dispose()
 
